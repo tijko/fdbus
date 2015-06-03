@@ -29,6 +29,24 @@ class Client(object):
         fd = client_cmsghdr.contents.cmsg_data
         return fd           
 
+    def sendmsg(self):
+        pass
+
+    def writefd(self):
+        pass
+
+    def closefd(self):
+        pass
+
+    def openfd(self):
+        pass
+
+    def createfd(self):
+        pass
+
+    def passfd(self):
+        pass
+
     def readfd(self, fd):
         rd_buffer = (c_char * 2048)()
         rd_buffer_len = 2048 - 1
