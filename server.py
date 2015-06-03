@@ -13,7 +13,8 @@ class Server(Thread):
 
     def __init__(self, path):
         super(Server, self).__init__()
-        self.clients = {}
+        self.clients = {} # separate class for client management
+        self.fds_managed  # subclassed to 
         self.server_event_poll = poll()
         self.path = path
         self.running = True
@@ -48,6 +49,7 @@ class Server(Thread):
             # raise exception
             print "Error in accept"
             return -1
+        # XXX create sendmsg method
         libc.sendmsg(c_int(client), pointer(msghdr(self.test_fd)), c_int(0))
         self.clients[client] = PyCClientWrapper(client)
 
@@ -74,10 +76,11 @@ class Server(Thread):
         self.running = False
         self.shutdown()
         
+    def current_clients(self):
+        pass
+
     def run(self):
         # poll for incoming messages to shutdown
-        fd = FileDescriptor('') #XXX test fd obj - random file path
-        self.test_fd = fd.fopen()
         if self.bind == -1:
             # raise exception
             print "Error in Bind"

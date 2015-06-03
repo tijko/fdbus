@@ -2,11 +2,29 @@
 # -*- coding: utf-8 -*-
 
 from os import fstat as stat
+from fdbus_h import *
 
+
+class ClientContainer(object):
+
+    def __init__(self):
+        pass
+
+    def bypath(self):
+        pass
+
+    def byfileno(self):
+        pass
+
+    def byfname(self):
+        pass
+
+    def __iter__(self):
+        pass
 
 class FileDescriptor(object):
     # have client fds
-    def __init__(self, path):
+    def __init__(self, path, fd=None):
         self.path = c_char_p(path)
 
     def fopen(self):
@@ -45,3 +63,11 @@ class FileDescriptor(object):
     def fclose(self):
         # handle errors
         ret = libc.close(self.fd)
+
+    def __enter__(self):
+        # handle errors
+        return self.fd
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        # handle errors
+        self.fclose()

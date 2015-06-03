@@ -5,8 +5,12 @@ from ctypes import c_int, c_uint, c_longlong, c_ushort, c_char, c_void_p, \
                    c_char_p, POINTER, pointer, cast, sizeof, Structure, CDLL
 
 
-libc = CDLL('libc.so.6')
+libc = CDLL('libc.so.6', use_errno=True)
 
+libc.open.restype = c_int
+libc.socket.restype = c_int
+libc.accept.restype = c_int
+libc.strerror.restype = c_char_p
 
 # set command protocols for communication to server-client
 # 

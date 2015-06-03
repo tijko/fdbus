@@ -47,6 +47,9 @@ class Client(object):
     def passfd(self):
         pass
 
+    def getpeers(self):
+        pass
+
     def readfd(self, fd):
         rd_buffer = (c_char * 2048)()
         rd_buffer_len = 2048 - 1
