@@ -7,7 +7,15 @@ from ctypes import c_int, c_uint, c_longlong, c_ushort, c_char, c_void_p, \
 
 libc = CDLL('libc.so.6')
 
-    
+
+# set command protocols for communication to server-client
+# 
+# to start have the send/request of a fd - basic -
+# an additional cmd might be to request server status information
+# on a multiplex server the cmds will natural become more involved 
+#
+
+# linux values 
 SOCK_ADDRDATA_SZ = 14
 UNIX_PATH_MAX = 108
 
@@ -26,7 +34,7 @@ AF_UNIX = 1
 
 DEFAULT_CLIENTS = 3
 
-MSG_CMSG_CLOEXEC = 0x40000000
+MSG_CMSG_CLOEXEC = 2 << 29
 
 # conversion of linux data types set to their ctypes size
 socklen_t = c_uint
