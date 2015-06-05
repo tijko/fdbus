@@ -6,7 +6,6 @@ from signal import signal, SIGINT
 from select import poll, POLLIN, POLLHUP
 
 from ..fdbus_h import *
-from ..fdobjects.fd_object import FileDescriptor
 
 
 class Server(Thread):
