@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from fdbus_h import *
+from ..fdbus_h import *
 
 
 class SocketError(Exception):
