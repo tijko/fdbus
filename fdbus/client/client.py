@@ -5,7 +5,7 @@ from ctypes import *
 from socket import *
 from select import *
 
-from ../fdbus_h import *
+from ..fdbus_h import *
 
 
 class Client(object):
