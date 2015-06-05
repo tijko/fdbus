@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from os import fstat as stat
-from fdbus_h import *
+from ..fdbus_h import *
 
 
 class ClientContainer(object):
