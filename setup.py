@@ -16,6 +16,6 @@ setup(
     description='Bus for passing file descriptors',
     long_description=open('README.md').read(),
     license=open('LICENSE').read(),
-    packages=find_packages('fdbus'),
-    package_dir={'':'fdbus'}
+    packages=['fdbus', 'fdbus/client', 'fdbus/server', 
+              'fdbus/exceptions', 'fdbus/fdobjects']
 )

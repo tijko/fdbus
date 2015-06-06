@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from time import ctime
 from threading import Thread
 from signal import signal, SIGINT
 from select import poll, POLLIN, POLLHUP
 
 from ..fdbus_h import *
+from ..fdobjects.fd_object import FileDescriptorPool
 
 
 class Server(Thread):
 
     def __init__(self, path):
         super(Server, self).__init__()
-        self.clients = {} # separate class for client management
-        self.fds_managed  # subclassed to 
+        self.clients = ClientPool() 
         self.server_event_poll = poll()
         self.path = path
         self.running = True
@@ -52,12 +53,6 @@ class Server(Thread):
         libc.sendmsg(c_int(client), pointer(msghdr(self.test_fd)), c_int(0))
         self.clients[client] = PyCClientWrapper(client)
 
-
-    def open_fd(self, fname):
-        c_fname = create_string_buffer(fname)
-        libc.open.restype = c_int
-        return libc.open(c_fname, O_RDONLY)
-    
     def client_ev(self, client, ev):
         if ev == POLLHUP:
             libc.close(client)
@@ -97,6 +92,20 @@ class Server(Thread):
                 else:
                     self.client_ev(*events[0])
         self.shutdown()
+
+class ClientPool(object):
+        
+    def __init__(self):
+        self.fd_pool = FileDescriptorPool()
+
+    def add(self, client):
+        pass
+
+    def remove(self, client):
+        pass
+
+    def dump(self):
+        pass
 
 class PyCClientWrapper(object):
 

@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from ctypes import *
-from socket import *
 from select import *
-
 from ..fdbus_h import *
 
 

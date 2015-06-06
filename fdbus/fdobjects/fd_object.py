@@ -1,13 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from collections import namedtuple
 from os import fstat as stat
+from time import ctime
+
 from ..fdbus_h import *
 
 
-class ClientContainer(object):
+fdobj = namedtuple('File_Descriptor', ('name', 'path', 'number', 'mode', 
+                                       'client', 'time', 'refcnt'))
+
+
+class FileDescriptorPool(object):
 
     def __init__(self):
+        pass
+
+    def add_fd(self, fdobj):
+        pass
+
+    def remove_fd(self, fdobj):
+        pass
+
+    def retrieve_fd(self, fdobj):
         pass
 
     def bypath(self):
@@ -22,10 +38,28 @@ class ClientContainer(object):
     def __iter__(self):
         pass
 
+
 class FileDescriptor(object):
-    # have client fds
-    def __init__(self, path, fd=None):
-        self.path = c_char_p(path)
+
+    def __new__(self, **kwargs):
+        return _FileDescriptor(kwargs.get('name'), kwargs.get('path'), 
+                               kwargs.get('number'), kwargs.get('mode'),
+                               kwargs.get('client'), kwargs.get('time'),
+                               kwargs.get('refcnt'))
+
+
+class _FileDescriptor(fdobj):
+
+    def __init__(self, name, path, number, mode, client, time, refcnt):
+        super(_FileDescriptor, self).__init__(name, path, number, mode, 
+                                                  client, time, refcnt)
+        self.name = name
+        self.path = path
+        self.number = number
+        self.mode = mode
+        self.client = client
+        self.time = time
+        self.refcnt = refcnt
 
     def fopen(self):
         libc.open.restype = c_int
