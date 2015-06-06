@@ -61,7 +61,6 @@ class Server(Thread):
             pass # XXX incoming client commands 
 
     def shutdown(self):
-        libc.close(self.test_fd)
         libc.close(self.server)
         libc.unlink(self.path)
         map(libc.close, self.clients)
