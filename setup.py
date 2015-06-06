@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 try:
-    from setuptools import setup, Extension, find_packages
+    from setuptools import setup
 except ImportError:
-    from disutils.core import setup, Extension
+    from disutils.core import setup
 
 
 setup(
