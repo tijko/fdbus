@@ -7,6 +7,7 @@ from signal import signal, SIGINT
 from select import poll, POLLIN, POLLHUP
 
 from ..fdbus_h import *
+from ..exceptions.exceptions import *
 from ..fdobjects.fd_object import FileDescriptorPool
 
 
@@ -24,9 +25,9 @@ class Server(Thread):
     def socket(self):
         libc.socket.restype = c_int
         server = libc.socket(AF_UNIX, SOCK_STREAM, PROTO_DEFAULT)
-        if (server == -1):
-            # raise exception
-            print 'Error in socket'
+        if server == -1:
+            errno = get_errno()
+            raise SocketError(errno)
         return server
 
     @property
@@ -45,22 +46,23 @@ class Server(Thread):
         client_size = c_int(sizeof(sockaddr_un))
         client_size_ptr = pointer(client_size)
         client = libc.accept(self.server, self.serv_sk_addr, client_size_ptr)
-        if (client == -1):
-            # raise exception
-            print "Error in accept"
-            return -1
+        if client == -1:
+            errno = get_errno()
+            raise AcceptError(errno)
         # XXX create sendmsg method
         #libc.sendmsg(c_int(client), pointer(msghdr(self.test_fd)), c_int(0))
-        self.clients[client] = PyCClientWrapper(client)
+        #self.clients[client] = PyCClientWrapper(client) override method to get assignment
+        self.clients.add(client)
 
     def client_ev(self, client, ev):
         if ev == POLLHUP:
             libc.close(client)
             del self.clients[client]
         else:
-            pass # XXX incoming client commands 
+            self.recvmsg(client)
 
     def shutdown(self):
+        # check for errors
         libc.close(self.server)
         libc.unlink(self.path)
         # call a close on client pool
@@ -72,25 +74,29 @@ class Server(Thread):
     def current_clients(self):
         pass
 
-    def recvmsg(self):
-        pass
+    def recvmsg(self, client):
+        msg = pointer(msghdr())
+        # set up a poll timout -- client disconnects -- will this call block indefin?
+        if libc.recvmsg(client, msg, MSG_SERV) == -1:
+            errno = get_errno()
+            raise RecvmsgError(errno)
+        self.get_msgcmd(msg)            
 
     def sendmsg(self):
         pass
 
-    def get_msgcmd(self):
-        pass
+    def get_msgcmd(self, msg):
+        #XXX post -->
+        print msg
 
     def run(self):
         # poll for incoming messages to shutdown
         if self.bind == -1:
-            # raise exception
-            print "Error in Bind"
-            return -1
+            errno = get_errno()
+            raise BindError(errno)
         if self.listen == -1:
-            # raise exception
-            print "Error in Listen"
-            return -1
+            errno = get_errno()
+            raise ListenError(errno)
         self.server_event_poll.register(self.server, POLLIN | POLLHUP)
         while self.running:
             events = self.server_event_poll.poll(2)
