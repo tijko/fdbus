@@ -50,7 +50,7 @@ class Server(Thread):
             print "Error in accept"
             return -1
         # XXX create sendmsg method
-        libc.sendmsg(c_int(client), pointer(msghdr(self.test_fd)), c_int(0))
+        #libc.sendmsg(c_int(client), pointer(msghdr(self.test_fd)), c_int(0))
         self.clients[client] = PyCClientWrapper(client)
 
     def client_ev(self, client, ev):
@@ -63,13 +63,22 @@ class Server(Thread):
     def shutdown(self):
         libc.close(self.server)
         libc.unlink(self.path)
-        map(libc.close, self.clients)
+        # call a close on client pool
 
     def server_interrupt(self, sig, frame):
         self.running = False
         self.shutdown()
         
     def current_clients(self):
+        pass
+
+    def recvmsg(self):
+        pass
+
+    def sendmsg(self):
+        pass
+
+    def get_msgcmd(self):
         pass
 
     def run(self):
