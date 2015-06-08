@@ -198,3 +198,17 @@ class StatError(Exception):
 
     def __str__(self):
         return "libc.stat error: %s" % libc.strerror(c_int(self.errno))
+
+class FileDescriptorError(Exception):
+    """
+        Exception class raised in the event of an error returned from a call to
+        a FileDescriptor class method.
+
+        This will be proprogated from the above libc calls down to the callee.
+    """
+
+    def __init__(self, fdobj):
+        self.fdobj = fdobj
+
+    def __str__(self):
+        return "FileDescriptor error: %s" % repr(self.fdobj)
