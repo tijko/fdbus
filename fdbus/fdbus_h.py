@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from ctypes import c_int, c_uint, c_longlong, c_ushort, c_char, c_void_p, \
-                   c_char_p, POINTER, pointer, cast, sizeof, Structure, CDLL
+from ctypes import c_int, c_uint, c_longlong, c_ushort, c_char, \
+                   c_void_p, c_char_p, POINTER, pointer, cast, \
+                   sizeof, Structure, CDLL, get_errno
 
 
 libc = CDLL('libc.so.6', use_errno=True)
@@ -20,8 +21,8 @@ libc.strerror.restype = c_char_p
 #
 # commands for client-server communica
 
-ADD_RD = 0x0
-ADD_WR = 0x1
+ADD_RDONLY = 0x0
+ADD_WRONLY = 0x1
 ADD_RDWR = 0x2
 
 PEER_DUMP = 0x10 
@@ -39,6 +40,8 @@ SOCK_ADDRDATA_SZ = 14
 UNIX_PATH_MAX = 108
 
 O_RDONLY = c_int(0)
+O_WRONLY = c_int(1)
+O_RDWR = c_int(2)
 
 SCM_RIGHTS = c_int(0x01)
 SOL_SOCKET = c_int(0x01)
@@ -54,6 +57,7 @@ AF_UNIX = 1
 DEFAULT_CLIENTS = 3
 
 MSG_CMSG_CLOEXEC = 2 << 29
+MSG_SERV = c_int(0)
 
 # conversion of linux data types set to their ctypes size
 socklen_t = c_uint
