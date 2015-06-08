@@ -15,15 +15,15 @@ fdobj = namedtuple('File_Descriptor', ('name', 'path', 'number', 'mode',
 class FileDescriptorPool(object):
 
     def __init__(self):
+        self.fdobjs = {}
+
+    def add(self, fdobj):
+        self.fdobjs[fdobj.name] = fdobj
+
+    def remove(self, fdobj):
         pass
 
-    def add_fd(self, fdobj):
-        pass
-
-    def remove_fd(self, fdobj):
-        pass
-
-    def retrieve_fd(self, fdobj):
+    def retrieve(self, fdobj):
         pass
 
     def bypath(self):
@@ -58,16 +58,16 @@ class _FileDescriptor(fdobj):
         self.number = number
         self.mode = mode
         self.client = client
-        self.time = time
+        self.time = ctime()
         self.refcnt = refcnt
 
     def fopen(self):
         libc.open.restype = c_int
-        self.fd = libc.open(self.path, O_RDONLY)
+        self.number = libc.open(self.path, self.mode)
         if (self.fd == -1):
-            # raise exception
-            print "Error in open"
-        return self.fd
+            errno = get_errno()
+            raise OpenError(errno)
+        return
 
     def fsize(self):
         try:
@@ -97,6 +97,9 @@ class _FileDescriptor(fdobj):
     def fclose(self):
         # handle errors
         ret = libc.close(self.fd)
+
+    def __repr__(self):
+        return "%s Fdobj: %s" % (self, self.name)
 
     def __enter__(self):
         # handle errors
