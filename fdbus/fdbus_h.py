@@ -18,6 +18,21 @@ libc.strerror.restype = c_char_p
 # an additional cmd might be to request server status information
 # on a multiplex server the cmds will natural become more involved 
 #
+# commands for client-server communica
+
+ADD_RD = 0x0
+ADD_WR = 0x1
+ADD_RDWR = 0x2
+
+PEER_DUMP = 0x10 
+
+CLS_FD = 0x11
+CLS_ALL = 0x12
+
+RET_FD = 0x13
+
+REFCNT_FD = 0x14
+
 
 # linux values 
 SOCK_ADDRDATA_SZ = 14
@@ -84,25 +99,25 @@ class msghdr(Structure):
                 ('msg_control', c_void_p), ('msg_controllen', size_t), 
                 ('msg_flags', c_int)]
 
-    def __init__(self, fd=None):
+    def __init__(self, cmd=None, fd=None):
         ctrl_msg_len = CMSG_SPACE(sizeof(c_int))
         # If no 'fd' parameter is passed upon initialization, this is a header
-        # for a "receiver" call.  Otherwise the struct will be initialized for a
+        # for a "receiver" call.  Otherwise this will initialized for a
         # "sender" call, which will need a slightly different arrangement of
-        # the struct's fields.
+        # the structure's fields.
         #
-        # Of the "sender" and "receiver" `msghdr`s, the "sender" `iovec` struct
+        # Of The "sender" and "receiver" 'msghdr's, the "sender" 'iovec' struct
         # will be set with a minimal character array for the transmission over 
-        # `sendmsg` and the "receiver" 'iovec' will be initialized with an empty
+        # `sendmsg` and the "receiver" 'iovec' will be initialized with a empty
         # char array large enough to contain that message passed through 
         # `recvmsg`. 
         #
-        # With the `cmsghdr` its the similiar idea, where the "sender" will 
+        # With the cmsghdr its the similiar idea, where the "sender" will 
         # have the struct initialized with its data set and the "receiver"
         # will have an empty array assigned to its data field.
         if fd is None:
             iov_base = (c_char * 1)()
-            ctrl_msg = (c_char * ctrl_buffer_len)()
+            ctrl_msg = (c_char * ctrl_msg_len)()
         else:
             iov_base = '*'
             ctrl_msg = pointer(cmsghdr(fd))
@@ -125,10 +140,10 @@ class cmsghdr(Structure):
 
 class cmsghdr_flex(Structure):
 
-    # This is a custom `cmsghdr` to use with the CMSG macros.  The only 
-    # difference between this struct and the cmsghdr struct above is that the 
-    # 'cmsg_data' field isn't in the former.  This is to account for the 
-    # 'cmsg_data' field being a flex array and the macros calculating the size.
+    # This is a custom cmsghdr to use with the CMSG macros.  The only difference 
+    # between this struct and the cmsghdr struct above is that the 'cmsg_data' 
+    # field isn't in the former.  This is to account for the 'cmsg_data' field
+    # being a flex array and the macros calculating the size.
 
     _fields_ = [('cmsg_len', c_int), 
                 ('cmsg_level', c_int), 
