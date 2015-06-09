@@ -6,10 +6,11 @@ from os import fstat as stat
 from time import ctime
 
 from ..fdbus_h import *
+from ..exceptions.exceptions import *
 
 
-fdobj = namedtuple('File_Descriptor', ('name', 'path', 'number', 'mode', 
-                                       'client', 'time', 'refcnt'))
+fdobj = namedtuple('File_Descriptor', ('name', 'path', 'fd', 'mode', 
+                                                'client', 'created'))
 
 
 class FileDescriptorPool(object):
@@ -42,32 +43,35 @@ class FileDescriptorPool(object):
 class FileDescriptor(object):
 
     def __new__(self, **kwargs):
-        return _FileDescriptor(kwargs.get('name'), kwargs.get('path'), 
-                               kwargs.get('number'), kwargs.get('mode'),
-                               kwargs.get('client'), kwargs.get('time'),
-                               kwargs.get('refcnt'))
+        path = kwargs.get('path')
+        if path is None:
+            raise FileDescriptorError(self)
+        name = path.split('/')[-1]
+        mode = kwargs.get('mode')
+        if mode is None:
+            raise FileDescriptorError(self)
+        fd = kwargs.get('fd')
+        if fd is None:
+            fd = FileDescriptor.fopen(path, mode)
+        client = kwargs.get('client')
+        created = ctime()
+        return _FileDescriptor(name, path, fd, mode, client, created)
 
+    @staticmethod
+    def fopen(path, mode):
+        libc.open.restype = c_int
+        fd = libc.open(path, mode)
+        if fd == -1:
+            errno = get_errno()
+            raise OpenError(errno)
+        return fd
 
 class _FileDescriptor(fdobj):
 
-    def __init__(self, name, path, number, mode, client, time, refcnt):
-        super(_FileDescriptor, self).__init__(name, path, number, mode, 
-                                                  client, time, refcnt)
-        self.name = name
-        self.path = path
-        self.number = number
-        self.mode = mode
-        self.client = client
-        self.time = ctime()
-        self.refcnt = refcnt
-
-    def fopen(self):
-        libc.open.restype = c_int
-        self.number = libc.open(self.path, self.mode)
-        if (self.fd == -1):
-            errno = get_errno()
-            raise OpenError(errno)
-        return
+    def __init__(self, name, path, fd, mode, client, created):
+        super(_FileDescriptor, self).__init__(name, path, fd, mode, 
+                                                   client, created)
+        self.refcnt = 1
 
     def fsize(self):
         try:
@@ -97,9 +101,6 @@ class _FileDescriptor(fdobj):
     def fclose(self):
         # handle errors
         ret = libc.close(self.fd)
-
-    def __repr__(self):
-        return "%s Fdobj: %s" % (self, self.name)
 
     def __enter__(self):
         # handle errors
