@@ -30,6 +30,7 @@ class Client(object):
         self.connected = True
        
     def recvmsg(self):
+        # XXX add in msg parsing ...
         client_msghdr = pointer(msghdr())
         libc.recvmsg(self.client, client_msghdr, MSG_CMSG_CLOEXEC)
         ctrl_msg = client_msghdr.contents.msg_control
@@ -37,8 +38,11 @@ class Client(object):
         fd = client_cmsghdr.contents.cmsg_data
         return fd           
 
-    def sendmsg(self):
-        pass
+    def sendmsg(self, cmd, fd=None):
+        msg = pointer(msghdr(cmd, fd))
+        if libc.sendmsg(self.client, msg, MSG_SERV) == -1:
+            errno = get_errno()
+            raise SendmsgError(errno)
 
     def writefd(self):
         pass
@@ -46,22 +50,21 @@ class Client(object):
     def closefd(self):
         pass
 
-    def openfd(self, fdobj):
-        try:
-            fdobj.fopen()
-        except OpenError:
-            raise FileDescriptorError(fdobj)
-        return
-
     def createfd(self, path, mode):
-        name = path.split('/')[-1]
-        fdobj = FileDescriptor(path=path, mode=mode, name=name)
-        self.openfd(fdobj)
+        fdobj = FileDescriptor(path=path, mode=mode, client=self)
         self.local_fds.add(fdobj)
-        return
  
-    def passfd(self):
+    def passfd(self, fd, peer):
+        # to a specific peer
         pass
+
+    def loadfd(self, name):
+        fdobj = self.local_fds.fdobjs.get(name)
+        if fdobj is None:
+            raise UnknownDescriptorError(name)
+        mode = fdobj.mode
+        fd = fdobj.fd
+        self.sendmsg(mode, fd)
 
     def getpeers(self):
         pass
