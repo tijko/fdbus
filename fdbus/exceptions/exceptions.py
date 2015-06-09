@@ -206,9 +206,39 @@ class FileDescriptorError(Exception):
 
         This will be proprogated from the above libc calls down to the callee.
     """
-
+    # XXX pass this more descriptive error or further propagations
     def __init__(self, fdobj):
         self.fdobj = fdobj
 
     def __str__(self):
         return "FileDescriptor error: %s" % repr(self.fdobj)
+
+class MsghdrError(Exception):
+    """
+        Exception class raised in the event of an error returned from a call to
+        a msghdr class.
+
+        This error is from supplying a file descriptor argument without a
+        command argument to specify an action the server is to take.
+    """
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return "Msghdr error: %s" % self.msg
+
+class UnknownDescriptorError(Exception):
+    """
+        Exception class raised in the event of an error returned from a call to
+        a method that handles file descriptors.
+
+        This error occurs whenever a reference to unknown descriptor is made 
+        (i.e. it has not been created yet or has been removed.).
+    """
+
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return "UnknownDescriptor: %s" % self.name
