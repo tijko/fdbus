@@ -49,10 +49,9 @@ class Server(Thread):
         if client == -1:
             errno = get_errno()
             raise AcceptError(errno)
-        # XXX create sendmsg method
-        #libc.sendmsg(c_int(client), pointer(msghdr(self.test_fd)), c_int(0))
-        #self.clients[client] = PyCClientWrapper(client) override method to get assignment
-        self.clients.add(client)
+        py_client = PyCClientWrapper(client) # XXX change to FileDescriptor object
+        self.server_event_poll.register(client, POLLIN | POLLHUP)
+        self.clients.add(py_client)
 
     def client_ev(self, client, ev):
         if ev == POLLHUP:
@@ -87,7 +86,7 @@ class Server(Thread):
 
     def get_msgcmd(self, msg):
         #XXX post -->
-        print msg
+        self.msg_contents = msg.contents
 
     def run(self):
         # poll for incoming messages to shutdown
@@ -110,10 +109,10 @@ class Server(Thread):
 class ClientPool(object):
         
     def __init__(self):
-        self.fd_pool = FileDescriptorPool()
+        self.fd_pool = {} 
 
     def add(self, client):
-        pass
+        self.fd_pool[client.fd] = client
 
     def remove(self, client):
         pass
