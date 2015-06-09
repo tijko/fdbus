@@ -16,7 +16,8 @@ class FdbusTest(unittest.TestCase):
         self.server_path = '/tmp/fdbus_test_server'
         self.test_server = Server(self.server_path)
         self.test_server.start()
-        self.test_fd_path = os.path.join(self.cwd, 'test_fdbus_file')
+        self.test_fd_name = 'test_fdbus_file'
+        self.test_fd_path = os.path.join(self.cwd, self.test_fd_name)
         self.test_client = Client(self.server_path) 
         self.test_client.connect()
         
@@ -35,14 +36,28 @@ class FdbusTest(unittest.TestCase):
         self.test_client.createfd(self.test_fd_path, O_RDONLY)
         fdpool = self.test_client.local_fds
         self.assertTrue(len(fdpool.fdobjs) == 1)
-        # test the fd - name - path - mode
+
+    def test_client_fdname(self):
+        pool = self.test_client.local_fds
+        test_fd = pool.fdobjs[self.test_fd_name]
+        self.assertTrue(test_fd.name == self.test_fd_name)
+
+    def test_client_fdpath(self):
+        pool = self.test_client.local_fds
+        test_fd = pool.fdobjs[self.test_fd_name]
+        self.assertTrue(test_fd.path == self.test_fd_path)
+
+    def test_client_fdmode(self):
+        pool = self.test_client.local_fds
+        test_fd = pool.fdobjs[self.test_fd_name]
+        self.assertTrue(test_fd.mode == O_RDONLY)
 
     def test_server_pool(self):
         pool = self.test_server.clients
         self.assertTrue(len(pool.fd_pool) == 1)
 
-    def test_client_passfd(self):
-        pass
+    def test_client_loadfd(self):
+        self.test_client.loadfd(self.test_fd_name)
 
     @classmethod
     def tearDownClass(self):
