@@ -5,6 +5,7 @@ from ctypes import c_int, c_uint, c_longlong, c_ushort, c_char, \
                    c_void_p, c_char_p, POINTER, pointer, cast, \
                    sizeof, Structure, CDLL, get_errno
 
+from exceptions.exceptions import *
 
 libc = CDLL('libc.so.6', use_errno=True)
 
@@ -21,14 +22,15 @@ libc.strerror.restype = c_char_p
 #
 # commands for client-server communica
 
-ADD_RDONLY = 0x0
-ADD_WRONLY = 0x1
-ADD_RDWR = 0x2
+LOAD_RDONLY = 0x0
+LOAD_WRONLY = 0x1
+LOAD_RDWR = 0x2
 
 PEER_DUMP = 0x10 
 
 CLS_FD = 0x11
 CLS_ALL = 0x12
+PASS_FD = 0x13
 
 RET_FD = 0x13
 
@@ -38,6 +40,8 @@ REFCNT_FD = 0x14
 # linux values 
 SOCK_ADDRDATA_SZ = 14
 UNIX_PATH_MAX = 108
+
+MSG_VECLEN = 0x1
 
 O_RDONLY = c_int(0)
 O_WRONLY = c_int(1)
@@ -94,7 +98,7 @@ class iovec(Structure):
 
     def __init__(self, io_data):
         self.iov_base = cast(io_data, c_void_p) 
-        self.iov_len = c_uint(len(io_data))
+        self.iov_len = c_uint(MSG_VECLEN)
 
 class msghdr(Structure):
 
@@ -105,29 +109,31 @@ class msghdr(Structure):
 
     def __init__(self, cmd=None, fd=None):
         ctrl_msg_len = CMSG_SPACE(sizeof(c_int))
-        # If no 'fd' parameter is passed upon initialization, this is a header
-        # for a "receiver" call.  Otherwise this will initialized for a
-        # "sender" call, which will need a slightly different arrangement of
-        # the structure's fields.
+        # If no 'fd' parameter is passed and no 'cmd' parameter is passed upon 
+        # initialization, this is a header for a "receiver" call.  Otherwise 
+        # this will initialized for a "sender" call, which will need a slightly 
+        # different arrangement of the structure's fields.
         #
         # Of The "sender" and "receiver" 'msghdr's, the "sender" 'iovec' struct
-        # will be set with a minimal character array for the transmission over 
-        # `sendmsg` and the "receiver" 'iovec' will be initialized with a empty
-        # char array large enough to contain that message passed through 
-        # `recvmsg`. 
+        # will be set with a command protocol number inside of 'iovec' struct 
+        # base field array for the transmission over `sendmsg` and the 
+        # "receiver" 'iovec' will be initialized with a empty int array large 
+        # enough to contain that message passed through  `recvmsg`. 
         #
         # With the cmsghdr its the similiar idea, where the "sender" will 
         # have the struct initialized with its data set and the "receiver"
         # will have an empty array assigned to its data field.
-        if fd is None:
+        if fd is None and cmd is None:
             iov_base = (c_char * 1)()
             ctrl_msg = (c_char * ctrl_msg_len)()
-        else:
-            iov_base = '*'
+        elif cmd is not None:
+            iov_base = (c_int * 1)()
+            iov_base[0] = cmd
             ctrl_msg = pointer(cmsghdr(fd))
+        else:
+            raise MsghdrError('InvalidArg fd needs cmd')
         self.msg_iov = pointer(iovec(iov_base))
-        iovlen = len(self.msg_iov.contents.iov_base)
-        self.msg_iovlen = size_t(iovlen)
+        self.msg_iovlen = size_t(MSG_VECLEN)
         self.msg_control = cast(ctrl_msg, c_void_p)
         self.msg_controllen = ctrl_msg_len
 
