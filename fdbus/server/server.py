@@ -77,7 +77,7 @@ class Server(Thread):
         pass
 
     def recvmsg(self, client):
-        msg = pointer(msghdr())
+        msg = pointer(msghdr(RECV))
         # set up a poll timout -- client disconnects -- will this call block indefin?
         if libc.recvmsg(client, msg, MSG_SERV) == -1:
             errno = get_errno()
@@ -85,6 +85,9 @@ class Server(Thread):
         self.get_cmdmsg(msg)            
 
     def sendmsg(self):
+        pass
+
+    def create_fdobj(self):
         pass
 
     def get_cmdmsg(self, msg):
@@ -128,12 +131,8 @@ class ClientPool(object):
     def __init__(self):
         self.fd_pool = {} 
 
-    def add_client(self, client):
+    def add(self, client):
         self.fd_pool[client.fd] = client
-        self.client_fds[client.name]
-
-    def add_client_fdobj(self, name, fdobj):
-        self.client_fds[name].append(fdobj)
 
     def remove(self, client):
         pass
@@ -142,6 +141,24 @@ class ClientPool(object):
         pass
 
 class PyCClientWrapper(object):
-
+    # specify / name -> each client ...?
+    # provide more detailed info on each client.
+    # or more decoupled client to fds 
     def __init__(self, client_c_fd):
         self.fd = client_c_fd
+
+class FDpool(object):
+
+    def __init__(self):
+        self.fdobjs = {}
+        self.client_fdobjs = defaultdict(list)
+
+    def add(self, fdobj, client):
+        self.fdobjs[fdobj.name] = {fdobj:client}
+        self.client_fdobjs.append(fdobj)
+
+    def remove(self, fdobj, client):
+        pass
+
+    def dump(self):
+        pass
