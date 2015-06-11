@@ -27,6 +27,8 @@ LOAD_RDONLY = 0x0
 LOAD_WRONLY = 0x1
 LOAD_RDWR = 0x2
 
+RECV = 0x1
+
 PASS = 0x10
 PEER_DUMP = 0x10 
 PASS_FD = 0x20
@@ -35,16 +37,15 @@ CLOSE = 0x100
 CLS_FD = 0x100
 CLS_ALL = 0x200
 
-REFERENCE = 0x1000
-RET_FD = 0x1000
-REFCNT_FD = 0x2000
-
+REFERENCE = 0x200
+RET_FD = 0x100
+REFCNT_FD = 0x200
 
 # linux values 
 SOCK_ADDRDATA_SZ = 14
 UNIX_PATH_MAX = 108
 
-MSG_VECLEN = 0x1
+FDBUS_IOVLEN = 0x2
 
 O_RDONLY = c_int(0)
 O_WRONLY = c_int(1)
@@ -101,7 +102,7 @@ class iovec(Structure):
 
     def __init__(self, io_data):
         self.iov_base = cast(io_data, c_void_p) 
-        self.iov_len = c_uint(MSG_VECLEN)
+        self.iov_len = c_uint(FDBUS_IOVLEN)
 
 class msghdr(Structure):
 
@@ -110,7 +111,7 @@ class msghdr(Structure):
                 ('msg_control', c_void_p), ('msg_controllen', size_t), 
                 ('msg_flags', c_int)]
 
-    def __init__(self, cmd=None, fd=None):
+    def __init__(self, proto, cmd=None, fd=None):
         ctrl_msg_len = CMSG_SPACE(sizeof(c_int))
         # If no 'fd' parameter is passed and no 'cmd' parameter is passed upon 
         # initialization, this is a header for a "receiver" call.  Otherwise 
@@ -126,17 +127,18 @@ class msghdr(Structure):
         # With the cmsghdr its the similiar idea, where the "sender" will 
         # have the struct initialized with its data set and the "receiver"
         # will have an empty array assigned to its data field.
-        if fd is None and cmd is None:
-            iov_base = (c_char * 1)()
+        if proto == RECV:	
+            iov_base = (c_char * FDBUS_IOVLEN)()
             ctrl_msg = (c_char * ctrl_msg_len)()
         elif cmd is not None:
-            iov_base = (c_int * 1)()
-            iov_base[0] = cmd
+            iov_base = (c_int * FDBUS_IOVLEN)()
+            iov_base[0] = proto
+            iov_base[1] = cmd
             ctrl_msg = pointer(cmsghdr(fd))
         else:
             raise MsghdrError('InvalidArg fd needs cmd')
         self.msg_iov = pointer(iovec(iov_base))
-        self.msg_iovlen = size_t(MSG_VECLEN)
+        self.msg_iovlen = size_t(1) # other multi-vector msg types
         self.msg_control = cast(ctrl_msg, c_void_p)
         self.msg_controllen = ctrl_msg_len
 
