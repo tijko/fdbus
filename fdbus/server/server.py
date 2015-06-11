@@ -4,6 +4,7 @@
 from time import ctime
 from threading import Thread
 from signal import signal, SIGINT
+from collections import defaultdict
 from select import poll, POLLIN, POLLHUP
 
 from ..fdbus_h import *
@@ -20,6 +21,8 @@ class Server(Thread):
         self.path = path
         self.running = True
         self.server = self.socket()
+        self.cmd_funcs = {LOAD:self.ld_cmdmsg, PASS:self.pass_cmdmsg,
+                          CLOSE:self.cls_cmdmsg, REFERENCE:self.ref_cmdmsg}
         signal(SIGINT, self.server_interrupt)
 
     def socket(self):
@@ -49,7 +52,7 @@ class Server(Thread):
         if client == -1:
             errno = get_errno()
             raise AcceptError(errno)
-        py_client = PyCClientWrapper(client) # XXX change to FileDescriptor object
+        py_client = PyCClientWrapper(client) 
         self.server_event_poll.register(client, POLLIN | POLLHUP)
         self.clients.add(py_client)
 
@@ -79,14 +82,28 @@ class Server(Thread):
         if libc.recvmsg(client, msg, MSG_SERV) == -1:
             errno = get_errno()
             raise RecvmsgError(errno)
-        self.get_msgcmd(msg)            
+        self.get_cmdmsg(msg)            
 
     def sendmsg(self):
         pass
 
-    def get_msgcmd(self, msg):
-        #XXX post -->
-        self.msg_contents = msg.contents
+    def get_cmdmsg(self, msg):
+        mhdr = msg.contents
+        iovhdr = msg.contents.msg_iov.contents
+        iovlen = msg.contents.msg_iovlen # another future recvmsg call
+        cmd_vec = cast(iovhdr.iov_base, POINTER(c_int))
+     
+    def ld_cmdmsg(self, cmd, msg):
+        pass
+
+    def pass_cmdmsg(self, cmd, msg):
+        pass
+
+    def cls_cmdmsg(self, cmd, msg):
+        pass
+
+    def ref_cmdmsg(self, cmd, msg):
+        pass
 
     def run(self):
         # poll for incoming messages to shutdown
@@ -111,8 +128,12 @@ class ClientPool(object):
     def __init__(self):
         self.fd_pool = {} 
 
-    def add(self, client):
+    def add_client(self, client):
         self.fd_pool[client.fd] = client
+        self.client_fds[client.name]
+
+    def add_client_fdobj(self, name, fdobj):
+        self.client_fds[name].append(fdobj)
 
     def remove(self, client):
         pass
