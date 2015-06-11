@@ -22,19 +22,22 @@ libc.strerror.restype = c_char_p
 #
 # commands for client-server communica
 
+LOAD = 0x0
 LOAD_RDONLY = 0x0
 LOAD_WRONLY = 0x1
 LOAD_RDWR = 0x2
 
+PASS = 0x10
 PEER_DUMP = 0x10 
+PASS_FD = 0x20
 
-CLS_FD = 0x11
-CLS_ALL = 0x12
-PASS_FD = 0x13
+CLOSE = 0x100
+CLS_FD = 0x100
+CLS_ALL = 0x200
 
-RET_FD = 0x13
-
-REFCNT_FD = 0x14
+REFERENCE = 0x1000
+RET_FD = 0x1000
+REFCNT_FD = 0x2000
 
 
 # linux values 
