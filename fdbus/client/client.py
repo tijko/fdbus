@@ -31,15 +31,15 @@ class Client(object):
        
     def recvmsg(self):
         # XXX add in msg parsing ...
-        client_msghdr = pointer(msghdr())
+        client_msghdr = pointer(msghdr(RECV))
         libc.recvmsg(self.client, client_msghdr, MSG_CMSG_CLOEXEC)
         ctrl_msg = client_msghdr.contents.msg_control
         client_cmsghdr = cast(ctrl_msg, POINTER(cmsghdr))
         fd = client_cmsghdr.contents.cmsg_data
         return fd           
 
-    def sendmsg(self, cmd, fd=None):
-        msg = pointer(msghdr(cmd, fd))
+    def sendmsg(self, proto, cmd, fd=None):
+        msg = pointer(msghdr(proto, cmd, fd))
         if libc.sendmsg(self.client, msg, MSG_SERV) == -1:
             errno = get_errno()
             raise SendmsgError(errno)
@@ -64,7 +64,7 @@ class Client(object):
             raise UnknownDescriptorError(name)
         mode = fdobj.mode
         fd = fdobj.fd
-        self.sendmsg(mode, fd)
+        self.sendmsg(LOAD, mode, fd)
 
     def getpeers(self):
         pass
