@@ -4,12 +4,11 @@
 from time import ctime
 from threading import Thread
 from signal import signal, SIGINT
-from collections import defaultdict
 from select import poll, POLLIN, POLLHUP
 
 from ..fdbus_h import *
 from ..exceptions.exceptions import *
-from ..fdobjects.fd_object import FileDescriptorPool
+from ..fdobjects.fd_object import FileDescriptorPool, FileDescriptor
 
 
 class Server(Thread):
@@ -17,6 +16,7 @@ class Server(Thread):
     def __init__(self, path):
         super(Server, self).__init__()
         self.clients = ClientPool() 
+        self.fdpool = FileDescriptorPool() 
         self.server_event_poll = poll()
         self.path = path
         self.running = True
@@ -55,6 +55,8 @@ class Server(Thread):
         py_client = PyCClientWrapper(client) 
         self.server_event_poll.register(client, POLLIN | POLLHUP)
         self.clients.add(py_client)
+        # have the server create an id, not just the fd of the client 
+        # connection.  then send it back to client
 
     def client_ev(self, client, ev):
         if ev == POLLHUP:
@@ -82,7 +84,7 @@ class Server(Thread):
         if libc.recvmsg(client, msg, MSG_SERV) == -1:
             errno = get_errno()
             raise RecvmsgError(errno)
-        self.get_cmdmsg(msg)            
+        self.get_cmdmsg(client, msg)            
 
     def sendmsg(self):
         pass
@@ -90,22 +92,30 @@ class Server(Thread):
     def create_fdobj(self):
         pass
 
-    def get_cmdmsg(self, msg):
-        mhdr = msg.contents
-        iovhdr = msg.contents.msg_iov.contents
-        iovlen = msg.contents.msg_iovlen # another future recvmsg call
-        cmd_vec = cast(iovhdr.iov_base, POINTER(c_int))
-     
-    def ld_cmdmsg(self, cmd, msg):
+    def get_cmdmsg(self, client, msg):
+        msg = msg.contents
+    	fmsg = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
+        protocol = fmsg.protocol
+        self.cmd_funcs[protocol](client, fmsg.command, msg)
+
+    def ld_cmdmsg(self, client, cmd, msg):
+        fd_msg = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
+        name = fd_msg.name
+        path = fd_msg.path
+        mode = cmd
+        created = fd_msg.created
+        fd = CMSG_DATA(msg.msg_control)
+        fdobj = FileDescriptor(name=name, path=path, fd=fd, mode=mode, 
+                               client=client, created=created)
+        self.fdpool.add(client, fdobj) 
+
+    def pass_cmdmsg(self, client, cmd, msg):
         pass
 
-    def pass_cmdmsg(self, cmd, msg):
+    def cls_cmdmsg(self, client, cmd, msg):
         pass
 
-    def cls_cmdmsg(self, cmd, msg):
-        pass
-
-    def ref_cmdmsg(self, cmd, msg):
+    def ref_cmdmsg(self, client, cmd, msg):
         pass
 
     def run(self):
@@ -126,6 +136,7 @@ class Server(Thread):
                     self.client_ev(*events[0])
         self.shutdown()
 
+# have a clients name/id themselves (str's)
 class ClientPool(object):
         
     def __init__(self):
@@ -140,25 +151,10 @@ class ClientPool(object):
     def dump(self):
         pass
 
+
 class PyCClientWrapper(object):
     # specify / name -> each client ...?
     # provide more detailed info on each client.
     # or more decoupled client to fds 
     def __init__(self, client_c_fd):
         self.fd = client_c_fd
-
-class FDpool(object):
-
-    def __init__(self):
-        self.fdobjs = {}
-        self.client_fdobjs = defaultdict(list)
-
-    def add(self, fdobj, client):
-        self.fdobjs[fdobj.name] = {fdobj:client}
-        self.client_fdobjs.append(fdobj)
-
-    def remove(self, fdobj, client):
-        pass
-
-    def dump(self):
-        pass
