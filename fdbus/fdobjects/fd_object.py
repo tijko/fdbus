@@ -8,7 +8,7 @@ from time import ctime
 from ..fdbus_h import *
 from ..exceptions.exceptions import *
 
-
+# a client name/id field (i.e. a process name or identifier/pid)
 fdobj = namedtuple('File_Descriptor', ('name', 'path', 'fd', 'mode', 
                                                 'client', 'created'))
 
@@ -17,9 +17,11 @@ class FileDescriptorPool(object):
 
     def __init__(self):
         self.fdobjs = {}
+        self.client_fdobjs = defaultdict(list)
 
-    def add(self, fdobj):
-        self.fdobjs[fdobj.name] = fdobj
+    def add(self, client, fdobj):
+        self.fdobjs[fdobj.name] = [client, fdobj]
+        self.client_fdobjs[client].append(fdobj)
 
     def remove(self, fdobj):
         pass
