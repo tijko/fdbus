@@ -38,8 +38,8 @@ class Client(object):
         fd = client_cmsghdr.contents.cmsg_data
         return fd           
 
-    def sendmsg(self, proto, cmd, fd=None):
-        msg = pointer(msghdr(proto, cmd, fd))
+    def sendmsg(self, proto, cmd, fdobj=None):
+        msg = pointer(msghdr(proto, cmd, fdobj))
         if libc.sendmsg(self.client, msg, MSG_SERV) == -1:
             errno = get_errno()
             raise SendmsgError(errno)
@@ -52,7 +52,7 @@ class Client(object):
 
     def createfd(self, path, mode):
         fdobj = FileDescriptor(path=path, mode=mode, client=self)
-        self.local_fds.add(fdobj)
+        self.local_fds.add(self, fdobj)
  
     def passfd(self, fd, peer):
         # to a specific peer
@@ -62,9 +62,8 @@ class Client(object):
         fdobj = self.local_fds.fdobjs.get(name)
         if fdobj is None:
             raise UnknownDescriptorError(name)
-        mode = fdobj.mode
-        fd = fdobj.fd
-        self.sendmsg(LOAD, mode, fd)
+        mode = fdobj[1].mode
+        self.sendmsg(LOAD, mode, fdobj[1])
 
     def getpeers(self):
         pass
