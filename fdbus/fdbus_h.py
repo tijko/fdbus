@@ -6,6 +6,7 @@ from ctypes import c_int, c_uint, c_longlong, c_ushort, c_char, \
                    sizeof, Structure, CDLL, get_errno
 
 from exceptions.exceptions import *
+from collections import defaultdict
 
 libc = CDLL('libc.so.6', use_errno=True)
 
@@ -45,7 +46,7 @@ REFCNT_FD = 0x200
 SOCK_ADDRDATA_SZ = 14
 UNIX_PATH_MAX = 108
 
-FDBUS_IOVLEN = 0x2
+FDBUS_IOVLEN = 0x1
 
 O_RDONLY = c_int(0)
 O_WRONLY = c_int(1)
@@ -72,20 +73,28 @@ socklen_t = c_uint
 size_t = c_uint
 off_t = c_longlong
 
-# cmsg macros
-CMSG_SPACE = lambda container: (CMSG_ALIGN(sizeof(cmsghdr_flex)) + 
-                                CMSG_ALIGN(container))
 
-CMSG_LEN = lambda data_type: CMSG_ALIGN(sizeof(cmsghdr_flex)) + data_type
+class fdmsg(Structure):
 
-CMSG_ALIGN = lambda data_len: ((data_len + sizeof(c_int) - 1) & 
-                               ~(sizeof(c_int) - 1))
+    _fields_ = [('protocol', c_int), ('command', c_int), ('name', c_char_p),
+                ('path', c_char_p), ('created', c_char_p)]
+
+    def __init__(self, proto, cmd=None, fdobj=None):
+        self.protocol = proto
+        self.command = cmd if cmd else c_int(0)
+        if fdobj is None:
+            self.name = self.client = self.path = self.created = c_char_p(None)
+        else:
+            self.name = c_char_p(fdobj.name)
+            self.path = c_char_p(fdobj.path)
+            self.created = c_char_p(fdobj.created)
 
 
 class sockaddr(Structure):
 
     _fields_ = [('sa_family', c_ushort), 
                 ('sa_data', c_char * SOCK_ADDRDATA_SZ)]
+
 
 class sockaddr_un(Structure):
 
@@ -96,23 +105,24 @@ class sockaddr_un(Structure):
         self.sun_family = c_ushort(family)
         self.sun_path = path
 
+
 class iovec(Structure):
 
     _fields_ = [('iov_base', c_void_p), ('iov_len', size_t)]
 
     def __init__(self, io_data):
         self.iov_base = cast(io_data, c_void_p) 
-        self.iov_len = c_uint(FDBUS_IOVLEN)
+        self.iov_len = size_t(sizeof(fdmsg) * FDBUS_IOVLEN)
+
 
 class msghdr(Structure):
 
     _fields_ = [('msg_name', c_void_p), ('msg_namelen', socklen_t), 
                 ('msg_iov', POINTER(iovec)), ('msg_iovlen', size_t),
-                ('msg_control', c_void_p), ('msg_controllen', size_t), 
+                ('msg_control', c_void_p), ('msg_controllen', size_t),
                 ('msg_flags', c_int)]
 
-    def __init__(self, proto, cmd=None, fd=None):
-        ctrl_msg_len = CMSG_SPACE(sizeof(c_int))
+    def __init__(self, proto, cmd=None, fdobj=None):
         # If no 'fd' parameter is passed and no 'cmd' parameter is passed upon 
         # initialization, this is a header for a "receiver" call.  Otherwise 
         # this will initialized for a "sender" call, which will need a slightly 
@@ -128,19 +138,17 @@ class msghdr(Structure):
         # have the struct initialized with its data set and the "receiver"
         # will have an empty array assigned to its data field.
         if proto == RECV:	
-            iov_base = (c_char * FDBUS_IOVLEN)()
-            ctrl_msg = (c_char * ctrl_msg_len)()
+            ctrl_msg = CTRL_MSG_RECV()
         elif cmd is not None:
-            iov_base = (c_int * FDBUS_IOVLEN)()
-            iov_base[0] = proto
-            iov_base[1] = cmd
-            ctrl_msg = pointer(cmsghdr(fd))
+            ctrl_msg = pointer(cmsghdr(fdobj.fd))
         else:
             raise MsghdrError('InvalidArg fd needs cmd')
+        iov_base = pointer(fdmsg(proto, cmd, fdobj))
         self.msg_iov = pointer(iovec(iov_base))
-        self.msg_iovlen = size_t(1) # other multi-vector msg types
+        self.msg_iovlen = size_t(FDBUS_IOVLEN)
         self.msg_control = cast(ctrl_msg, c_void_p)
-        self.msg_controllen = ctrl_msg_len
+        self.msg_controllen = CTRL_MSG_LEN
+
 
 class cmsghdr(Structure):
 
@@ -153,6 +161,7 @@ class cmsghdr(Structure):
         self.cmsg_type = SCM_RIGHTS
         self.cmsg_data = fd
 
+
 class cmsghdr_flex(Structure):
 
     # This is a custom cmsghdr to use with the CMSG macros.  The only difference 
@@ -163,3 +172,18 @@ class cmsghdr_flex(Structure):
     _fields_ = [('cmsg_len', c_int), 
                 ('cmsg_level', c_int), 
                 ('cmsg_type', c_int)]
+
+
+# cmsg macros
+CMSG_SPACE = lambda container: (CMSG_ALIGN(sizeof(cmsghdr_flex)) + 
+                                CMSG_ALIGN(container))
+
+CMSG_LEN = lambda data_type: CMSG_ALIGN(sizeof(cmsghdr_flex)) + data_type
+
+CMSG_ALIGN = lambda data_len: ((data_len + sizeof(c_int) - 1) & 
+                               ~(sizeof(c_int) - 1))
+
+CMSG_DATA = lambda msg: cast(msg, POINTER(cmsghdr)).contents.cmsg_data
+
+CTRL_MSG_LEN = CMSG_SPACE(sizeof(c_int))
+CTRL_MSG_RECV = c_char * CTRL_MSG_LEN
