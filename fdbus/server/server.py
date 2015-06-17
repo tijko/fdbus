@@ -66,16 +66,26 @@ class Server(Thread):
             self.recvmsg(client)
 
     def shutdown(self):
-        # check for errors
-        libc.close(self.server)
-        libc.unlink(self.path)
-        # call a close on client pool
+        libc.close.restype = c_int
+        libc.unlink.restype = c_int
+        ret = libc.close(self.server)
+        if ret == -1:
+            errno = get_errno()
+            raise CloseError(errno)
+        ret = libc.unlink(self.path)
+        if ret == -1:
+            errno = get_errno()
+            raise UnlinkError(errno)
+        self.close_pool()
 
     def server_interrupt(self, sig, frame):
         self.running = False
         self.shutdown()
         
     def current_clients(self):
+        pass
+
+    def close_pool(self):
         pass
 
     def recvmsg(self, client):
