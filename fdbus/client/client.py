@@ -5,18 +5,14 @@ from select import *
 
 from ..fdbus_h import *
 from ..exceptions.exceptions import *
-from ..fdobjects.fd_object import FileDescriptor, FileDescriptorPool
+from ..fdobjects.fdobjects import FileDescriptor, FileDescriptorPool, FDBus
 
 
-class Client(object):
+class Client(FDBus):
 
     def __init__(self, path):
-        self.path = path
-        self.client = libc.socket(AF_UNIX, SOCK_STREAM, PROTO_DEFAULT) 
-        if self.client == -1:
-            errno = get_errno()
-            raise SocketError(errno)
-        self.local_fds = FileDescriptorPool() 
+        super(Client, self).__init__(path)
+        self.client = self.socket() 
         self.connected = False
 
     def connect(self):
@@ -29,37 +25,18 @@ class Client(object):
             raise ConnectError(errno)
         self.connected = True
        
-    def recvmsg(self):
-        # XXX add in msg parsing ...
-        client_msghdr = pointer(msghdr(RECV))
-        libc.recvmsg(self.client, client_msghdr, MSG_CMSG_CLOEXEC)
-        ctrl_msg = client_msghdr.contents.msg_control
-        client_cmsghdr = cast(ctrl_msg, POINTER(cmsghdr))
-        fd = client_cmsghdr.contents.cmsg_data
-        return fd           
-
-    def sendmsg(self, proto, cmd, fdobj=None):
-        msg = pointer(msghdr(proto, cmd, fdobj))
-        if libc.sendmsg(self.client, msg, MSG_SERV) == -1:
-            errno = get_errno()
-            raise SendmsgError(errno)
-
     def writefd(self):
         pass
 
     def closefd(self):
         pass
 
-    def createfd(self, path, mode):
-        fdobj = FileDescriptor(path=path, mode=mode, client=self)
-        self.local_fds.add(self, fdobj)
- 
     def passfd(self, fd, peer):
         # to a specific peer
         pass
 
     def loadfd(self, name):
-        fdobj = self.local_fds.fdobjs.get(name)
+        fdobj = self.fdpool.fdobjs.get(name)
         if fdobj is None:
             raise UnknownDescriptorError(name)
         mode = fdobj[1].mode
