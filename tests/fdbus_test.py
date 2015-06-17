@@ -36,21 +36,21 @@ class FdbusTest(unittest.TestCase):
         with open(self.test_fd_path, 'w+') as test_file:
             test_file.write('fdbus test file')
         self.test_client.createfd(self.test_fd_path, O_RDONLY)
-        fdpool = self.test_client.local_fds
+        fdpool = self.test_client.fdpool
         self.assertTrue(len(fdpool.fdobjs) == 1)
 
     def test_client_fdname(self):
-        pool = self.test_client.local_fds
+        pool = self.test_client.fdpool
         test_fd = pool.fdobjs[self.test_fd_name][1]
         self.assertTrue(test_fd.name == self.test_fd_name)
 
     def test_client_fdpath(self):
-        pool = self.test_client.local_fds
+        pool = self.test_client.fdpool
         test_fd = pool.fdobjs[self.test_fd_name][1]
         self.assertTrue(test_fd.path == self.test_fd_path)
 
     def test_client_fdmode(self):
-        pool = self.test_client.local_fds
+        pool = self.test_client.fdpool
         test_fd = pool.fdobjs[self.test_fd_name][1]
         self.assertTrue(test_fd.mode == O_RDONLY)
 
