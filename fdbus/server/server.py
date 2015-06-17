@@ -8,21 +8,18 @@ from select import poll, POLLIN, POLLHUP
 
 from ..fdbus_h import *
 from ..exceptions.exceptions import *
-from ..fdobjects.fd_object import FileDescriptorPool, FileDescriptor
+from ..fdobjects.fdobjects import FileDescriptorPool, FileDescriptor, FDBus
 
 
-class Server(Thread):
+class Server(FDBus, Thread):
 
     def __init__(self, path):
-        super(Server, self).__init__()
+        super(Server, self).__init__(path)
         self.clients = ClientPool() 
         self.fdpool = FileDescriptorPool() 
         self.server_event_poll = poll()
-        self.path = path
         self.running = True
         self.server = self.socket()
-        self.cmd_funcs = {LOAD:self.ld_cmdmsg, PASS:self.pass_cmdmsg,
-                          CLOSE:self.cls_cmdmsg, REFERENCE:self.ref_cmdmsg}
         signal(SIGINT, self.server_interrupt)
 
     def socket(self):
@@ -83,49 +80,6 @@ class Server(Thread):
         self.shutdown()
         
     def current_clients(self):
-        pass
-
-    def close_pool(self):
-        pass
-
-    def recvmsg(self, client):
-        msg = pointer(msghdr(RECV))
-        # set up a poll timout -- client disconnects -- will this call block indefin?
-        if libc.recvmsg(client, msg, MSG_SERV) == -1:
-            errno = get_errno()
-            raise RecvmsgError(errno)
-        self.get_cmdmsg(client, msg)            
-
-    def sendmsg(self):
-        pass
-
-    def create_fdobj(self):
-        pass
-
-    def get_cmdmsg(self, client, msg):
-        msg = msg.contents
-    	fmsg = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
-        protocol = fmsg.protocol
-        self.cmd_funcs[protocol](client, fmsg.command, msg)
-
-    def ld_cmdmsg(self, client, cmd, msg):
-        fd_msg = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
-        name = fd_msg.name
-        path = fd_msg.path
-        mode = cmd
-        created = fd_msg.created
-        fd = CMSG_DATA(msg.msg_control)
-        fdobj = FileDescriptor(name=name, path=path, fd=fd, mode=mode, 
-                               client=client, created=created)
-        self.fdpool.add(client, fdobj) 
-
-    def pass_cmdmsg(self, client, cmd, msg):
-        pass
-
-    def cls_cmdmsg(self, client, cmd, msg):
-        pass
-
-    def ref_cmdmsg(self, client, cmd, msg):
         pass
 
     def run(self):
