@@ -77,14 +77,16 @@ off_t = c_longlong
 class fdmsg(Structure):
 
     _fields_ = [('protocol', c_int), ('command', c_int), ('name', c_char_p),
-                ('path', c_char_p), ('created', c_char_p), ('mode', c_int)]
+                ('path', c_char_p), ('created', c_char_p), ('mode', c_int),
+                ('client', c_int)]
 
-    def __init__(self, proto, cmd=None, fdobj=None):
+    def __init__(self, proto, cmd=None, fdobj=None, client=None):
         self.protocol = proto
         self.command = cmd if cmd else c_int(0)
+        self.client = c_int(-1) if client is None else c_int(client)
         if fdobj is None:
-            self.name = self.client = self.path = self.created = c_char_p(None)
-            self.mode = c_int(0)
+            self.name = self.path = self.created = c_char_p(None)
+            self.mode = c_int(-1)
         else:
             self.name = c_char_p(fdobj.name)
             self.path = c_char_p(fdobj.path)
@@ -123,7 +125,7 @@ class msghdr(Structure):
                 ('msg_control', c_void_p), ('msg_controllen', size_t),
                 ('msg_flags', c_int)]
 
-    def __init__(self, proto, cmd=None, fdobj=None):
+    def __init__(self, proto, cmd=None, fdobj=None, client=None):
         # If no 'fd' parameter is passed and no 'cmd' parameter is passed upon 
         # initialization, this is a header for a "receiver" call.  Otherwise 
         # this will initialized for a "sender" call, which will need a slightly 
@@ -144,7 +146,7 @@ class msghdr(Structure):
             ctrl_msg = pointer(cmsghdr(fdobj.fd))
         else:
             raise MsghdrError('InvalidArg fd needs cmd')
-        iov_base = pointer(fdmsg(proto, cmd, fdobj))
+        iov_base = pointer(fdmsg(proto, cmd, fdobj, client))
         self.msg_iov = pointer(iovec(iov_base))
         self.msg_iovlen = size_t(FDBUS_IOVLEN)
         self.msg_control = cast(ctrl_msg, c_void_p)
