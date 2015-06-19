@@ -31,16 +31,11 @@ class Client(FDBus):
     def closefd(self):
         pass
 
-    def passfd(self, fd, peer):
-        # to a specific peer
-        pass
+    def passfd(self, name, peer):
+        self.send_fd(name, PASS, peer)
 
     def loadfd(self, name):
-        fdobj = self.fdpool.fdobjs.get(name)
-        if fdobj is None:
-            raise UnknownDescriptorError(name)
-        mode = fdobj[1].mode
-        self.sendmsg(LOAD, mode, fdobj[1])
+        self.send_fd(name, LOAD)
 
     def getpeers(self):
         pass
