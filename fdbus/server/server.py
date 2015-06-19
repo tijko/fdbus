@@ -19,25 +19,25 @@ class Server(FDBus, Thread):
         self.fdpool = FileDescriptorPool() 
         self.server_event_poll = poll()
         self.running = True
-        self.server = self.socket()
+        self.sock = self.socket()
         signal(SIGINT, self.server_interrupt)
 
     @property
     def listen(self):
-        return libc.listen(self.server, DEFAULT_CLIENTS)
+        return libc.listen(self.sock, DEFAULT_CLIENTS)
 
     @property
     def bind(self):
         server_address = pointer(sockaddr_un(AF_UNIX, self.path))
         self.serv_sk_addr = cast(server_address, POINTER(sockaddr))
         server_size = sizeof(sockaddr_un)
-        return libc.bind(self.server, self.serv_sk_addr, server_size)
+        return libc.bind(self.sock, self.serv_sk_addr, server_size)
 
     def accept(self):
         libc.accept.restype = c_int
         client_size = c_int(sizeof(sockaddr_un))
         client_size_ptr = pointer(client_size)
-        client = libc.accept(self.server, self.serv_sk_addr, client_size_ptr)
+        client = libc.accept(self.sock, self.serv_sk_addr, client_size_ptr)
         if client == -1:
             errno = get_errno()
             raise AcceptError(errno)
@@ -57,7 +57,7 @@ class Server(FDBus, Thread):
     def shutdown(self):
         libc.close.restype = c_int
         libc.unlink.restype = c_int
-        ret = libc.close(self.server)
+        ret = libc.close(self.sock)
         if ret == -1:
             errno = get_errno()
             raise CloseError(errno)
@@ -82,11 +82,11 @@ class Server(FDBus, Thread):
         if self.listen == -1:
             errno = get_errno()
             raise ListenError(errno)
-        self.server_event_poll.register(self.server, POLLIN | POLLHUP)
+        self.server_event_poll.register(self.sock, POLLIN | POLLHUP)
         while self.running:
             events = self.server_event_poll.poll(2)
             if events:
-                if events[0][0] == self.server:
+                if events[0][0] == self.sock:
                     self.accept()            
                 else:
                     self.client_ev(*events[0])
