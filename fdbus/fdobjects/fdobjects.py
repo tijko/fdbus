@@ -142,7 +142,7 @@ class FDBus(object):
     def send_fd(self, name, proto, recepient=None):
         fdobj = self.get_fd(name)
         cmd = fdobj[1].mode if recepient is None else PASS_FD
-        self.sendmsg(proto, cmd, fdobj[1])
+        self.sendmsg(proto, cmd, fdobj[1], recepient)
 
     def recvmsg(self, sock):
         msg = pointer(msghdr(RECV))
@@ -153,9 +153,8 @@ class FDBus(object):
         self.get_cmdmsg(sock, msg)
         
     def sendmsg(self, proto, cmd, fdobj=None, client=None):
-        msg = pointer(msghdr(proto, cmd, fdobj))
-        client = self.client if client is None else client
-        if libc.sendmsg(client, msg, MSG_SERV) == -1:
+        msg = pointer(msghdr(proto, cmd, fdobj, client))
+        if libc.sendmsg(self.sock, msg, MSG_SERV) == -1:
             errno = get_errno()
             raise SendmsgError(errno)      
 
