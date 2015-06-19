@@ -22,14 +22,6 @@ class Server(FDBus, Thread):
         self.server = self.socket()
         signal(SIGINT, self.server_interrupt)
 
-    def socket(self):
-        libc.socket.restype = c_int
-        server = libc.socket(AF_UNIX, SOCK_STREAM, PROTO_DEFAULT)
-        if server == -1:
-            errno = get_errno()
-            raise SocketError(errno)
-        return server
-
     @property
     def listen(self):
         return libc.listen(self.server, DEFAULT_CLIENTS)
