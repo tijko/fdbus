@@ -16,7 +16,6 @@ class Server(FDBus, Thread):
     def __init__(self, path):
         super(Server, self).__init__(path)
         self.clients = ClientPool() 
-        self.fdpool = FileDescriptorPool() 
         self.server_event_poll = poll()
         self.running = True
         self.sock = self.socket()
@@ -71,8 +70,12 @@ class Server(FDBus, Thread):
         self.running = False
         self.shutdown()
         
+    @property
     def current_clients(self):
-        pass
+        return self.clients.dump()
+
+    def remove_client(self, client):
+        self.clients.remove(client)
 
     def run(self):
         # poll for incoming messages to shutdown
@@ -102,11 +105,13 @@ class ClientPool(object):
         self.fd_pool[client.fd] = client
 
     def remove(self, client):
-        pass
+        try:
+            del self.fd_pool[client]
+        except KeyError:
+            raise UnKnownFileDescriptorError(client)
 
     def dump(self):
-        pass
-
+        return self.fd_pool.keys()
 
 class PyCClientWrapper(object):
     # specify / name -> each client ...?
