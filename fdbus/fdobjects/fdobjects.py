@@ -119,7 +119,7 @@ class FDBus(object):
         super(FDBus, self).__init__()
         self.path = path
         self.fdpool = FileDescriptorPool() 
-        self.cmd_funcs = {LOAD:self.ld_cmdmsg, PASS:self.pass_cmdmsg,
+        self.cmd_funcs = {LOAD:self.ld_cmdmsg, PASS:self.ld_cmdmsg,
                           CLOSE:self.cls_cmdmsg, REFERENCE:self.ref_cmdmsg}
 
     def socket(self):
@@ -133,6 +133,17 @@ class FDBus(object):
     def close_pool(self):
         pass
 
+    def get_fd(self, name):
+        fdobj = self.fdpool.fdobjs.get(name)
+        if fdobj is None:
+            raise UnKnownDescriptorError(name)
+        return fdobj
+
+    def send_fd(self, name, proto, recepient=None):
+        fdobj = self.get_fd(name)
+        cmd = fdobj[1].mode if recepient is None else PASS_FD
+        self.sendmsg(proto, cmd, fdobj[1])
+
     def recvmsg(self, sock):
         msg = pointer(msghdr(RECV))
         # set up a poll timout -- client disconnects -- will this call block indefin?
@@ -141,9 +152,10 @@ class FDBus(object):
             raise RecvmsgError(errno)
         self.get_cmdmsg(sock, msg)
         
-    def sendmsg(self, proto, cmd, fdobj=None):
+    def sendmsg(self, proto, cmd, fdobj=None, client=None):
         msg = pointer(msghdr(proto, cmd, fdobj))
-        if libc.sendmsg(self.client, msg, MSG_SERV) == -1:
+        client = self.client if client is None else client
+        if libc.sendmsg(client, msg, MSG_SERV) == -1:
             errno = get_errno()
             raise SendmsgError(errno)      
 
