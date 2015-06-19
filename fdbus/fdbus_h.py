@@ -77,18 +77,19 @@ off_t = c_longlong
 class fdmsg(Structure):
 
     _fields_ = [('protocol', c_int), ('command', c_int), ('name', c_char_p),
-                ('path', c_char_p), ('created', c_char_p)]
+                ('path', c_char_p), ('created', c_char_p), ('mode', c_int)]
 
     def __init__(self, proto, cmd=None, fdobj=None):
         self.protocol = proto
         self.command = cmd if cmd else c_int(0)
         if fdobj is None:
             self.name = self.client = self.path = self.created = c_char_p(None)
+            self.mode = c_int(0)
         else:
             self.name = c_char_p(fdobj.name)
             self.path = c_char_p(fdobj.path)
             self.created = c_char_p(fdobj.created)
-
+            self.mode = fdobj.mode
 
 class sockaddr(Structure):
 
