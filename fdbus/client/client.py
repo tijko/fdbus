@@ -12,14 +12,14 @@ class Client(FDBus):
 
     def __init__(self, path):
         super(Client, self).__init__(path)
-        self.client = self.socket() 
+        self.sock = self.socket() 
         self.connected = False
 
     def connect(self):
         self.client_address = pointer(sockaddr_un(AF_UNIX, self.path))
         self.client_address.contents.sun_family = AF_UNIX
         self.client_address.contents.sun_path = self.path
-        if (libc.connect(self.client, cast(self.client_address, 
+        if (libc.connect(self.sock, cast(self.client_address, 
                          POINTER(sockaddr)), sizeof(sockaddr_un)) == -1):
             errno = get_errno()
             raise ConnectError(errno)
