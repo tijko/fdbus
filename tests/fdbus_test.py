@@ -69,6 +69,17 @@ class FdbusTest(unittest.TestCase):
         client = self.test_server.fdpool.client_fdobjs
         self.assertTrue(len(client) == 1)
 
+    def test_server_clientpool(self):
+        pool = self.test_server.current_clients
+        self.assertTrue(len(pool) == 1)
+
+    def test_server_removeclient(self):
+        pool_w_client = self.test_server.current_clients
+        client = pool_w_client[0]
+        self.test_server.remove_client(client)
+        pool_wo_client = self.test_server.current_clients
+        self.assertTrue(client not in pool_wo_client)
+
     @classmethod
     def tearDownClass(self):
         self.test_server.running = False
