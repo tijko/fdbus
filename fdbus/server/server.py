@@ -40,9 +40,8 @@ class Server(FDBus, Thread):
         if client == -1:
             errno = get_errno()
             raise AcceptError(errno)
-        py_client = PyCClientWrapper(client) 
         self.server_event_poll.register(client, POLLIN | POLLHUP)
-        self.clients.add(py_client)
+        self.clients[client] = PyCClientWrapper(client)
         # have the server create an id, not just the fd of the client 
         # connection.  then send it back to client
 
@@ -56,14 +55,17 @@ class Server(FDBus, Thread):
     def shutdown(self):
         libc.close.restype = c_int
         libc.unlink.restype = c_int
-        ret = libc.close(self.sock)
-        if ret == -1:
-            errno = get_errno()
-            raise CloseError(errno)
         ret = libc.unlink(self.path)
         if ret == -1:
             errno = get_errno()
             raise UnlinkError(errno)
+        if any(ret == -1 for ret in map(libc.close, self.clients)):
+            errno = get_errno()
+            raise CloseError(errno)
+        ret = libc.close(self.sock)
+        if ret == -1:
+            errno = get_errno()
+            raise CloseError(errno)
         self.close_pool()
 
     def server_interrupt(self, sig, frame):
@@ -101,9 +103,6 @@ class ClientPool(object):
     def __init__(self):
         self.fd_pool = {} 
 
-    def add(self, client):
-        self.fd_pool[client.fd] = client
-
     def remove(self, client):
         try:
             del self.fd_pool[client]
@@ -112,6 +111,27 @@ class ClientPool(object):
 
     def dump(self):
         return self.fd_pool.keys()
+
+    def __len__(self):
+        return len(self.fd_pool)
+
+    def __iter__(self):
+        for fd in self.fd_pool:
+            yield fd
+
+    def __setitem__(self, item, value):
+        self.fd_pool[item] = value
+
+    def __getitem__(self, item):
+        try:
+            client = self.fd_pool[item]
+        except KeyError:
+            raise UnKnownFileDescriptorError(item)
+        return client
+
+    def __len__(self):
+        return len(self.fd_pool)
+
 
 class PyCClientWrapper(object):
     # specify / name -> each client ...?
