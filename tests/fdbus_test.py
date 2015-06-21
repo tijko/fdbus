@@ -55,8 +55,7 @@ class FdbusTest(unittest.TestCase):
         self.assertTrue(test_fd.mode == O_RDONLY)
 
     def test_server_pool(self):
-        pool = self.test_server.clients
-        self.assertTrue(len(pool.fd_pool) == 1)
+        self.assertTrue(len(self.test_server.clients) == 1)
 
     def test_client_loadfd(self):
         self.test_client.loadfd(self.test_fd_name)
