@@ -23,8 +23,13 @@ class FileDescriptorPool(object):
         self.fdobjs[fdobj.name] = [client, fdobj]
         self.client_fdobjs[client].append(fdobj)
 
-    def remove(self, fdobj):
-        pass
+    def remove(self, name):
+        try:
+            fdobj = self.fdobjs[name]
+            self.client_fdobjs[fdobj[0]].remove(fdobj[1])
+            del self.fdobjs[name]
+        except KeyError:
+            raise UnknownDescriptorError(name)
 
     def retrieve(self, fdobj):
         pass
@@ -144,6 +149,10 @@ class FDBus(object):
         cmd = fdobj[1].mode if recepient is None else PASS_FD
         self.sendmsg(proto, cmd, fdobj[1], recepient)
 
+    def remove_fd(self, name):
+        fdobj = self.get_fd(name)
+        self.sendmsg(CLOSE, CLS_FD, fdobj[1])
+
     def recvmsg(self, sock):
         msg = pointer(msghdr(RECV))
         # set up a poll timout -- client disconnects -- will this call block indefin?
@@ -168,12 +177,16 @@ class FDBus(object):
         protocol = fmsg.protocol
         self.cmd_funcs[protocol](sock, fmsg.command, msg)
 
+    def unpack_vector(self, msg):
+        vector = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
+        return vector
+
     def ld_cmdmsg(self, sock, cmd, msg):
-        fd_msg = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
-        name = fd_msg.name
-        path = fd_msg.path
+        vector = self.unpack_vector(msg)
+        name = vector.name
+        path = vector.path
         mode = cmd
-        created = fd_msg.created
+        created = vector.created
         fd = CMSG_DATA(msg.msg_control)
         fdobj = FileDescriptor(name=name, path=path, fd=fd, mode=mode, 
                                client=sock, created=created)
@@ -183,7 +196,9 @@ class FDBus(object):
         pass
 
     def cls_cmdmsg(self, sock, cmd, msg):
-        pass
+        if cmd == CLS_FD:
+            vector = self.unpack_vector(msg)
+            self.fdpool.remove(vector.name)
 
     def ref_cmdmsg(self, sock, cmd, msg):
         pass
