@@ -31,6 +31,9 @@ class Client(FDBus):
     def closefd(self):
         pass
 
+    def remove(self, name):
+        self.remove_fd(name)        
+
     def passfd(self, name, peer):
         self.send_fd(name, PASS, peer)
 
