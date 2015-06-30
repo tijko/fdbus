@@ -57,6 +57,10 @@ class FdbusTest(unittest.TestCase):
     def test_server_pool(self):
         self.assertTrue(len(self.test_server.clients) == 1)
 
+    def test_server_clientfd_pool(self):
+        client = self.test_server.fdpool.client_fdobjs
+        self.assertTrue(len(client) == 1)
+
     def test_client_loadfd(self):
         self.test_client.loadfd(self.test_fd_name)
 
@@ -64,9 +68,9 @@ class FdbusTest(unittest.TestCase):
         fdpool = self.test_server.fdpool.fdobjs
         self.assertTrue(len(fdpool) == 1)
 
-    def test_server_clientfd_pool(self):
-        client = self.test_server.fdpool.client_fdobjs
-        self.assertTrue(len(client) == 1)
+    def test_server_remove_clientfd(self):
+        self.test_client.remove(self.test_fd_name)
+        fdpool = self.test_server.fdpool.fdobjs
 
     def test_server_clientpool(self):
         pool = self.test_server.current_clients
@@ -86,4 +90,6 @@ class FdbusTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    loader = unittest.TestLoader()
+    loader.loadTestsFromTestCase(FdbusTest)
+    unittest.main(testLoader=loader, verbosity=2)
