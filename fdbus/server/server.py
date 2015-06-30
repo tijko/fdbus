@@ -112,6 +112,9 @@ class ClientPool(object):
     def dump(self):
         return self.fd_pool.keys()
 
+    def __len__(self):
+        return len(self.fd_pool)
+
     def __iter__(self):
         for fd in self.fd_pool:
             yield fd
