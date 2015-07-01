@@ -38,8 +38,8 @@ class Server(FDBus, Thread):
         client_size_ptr = pointer(client_size)
         client = libc.accept(self.sock, self.serv_sk_addr, client_size_ptr)
         if client == -1:
-            errno = get_errno()
-            raise AcceptError(errno)
+            error_msg = get_error_msg()
+            raise AcceptError(error_msg)
         self.server_event_poll.register(client, POLLIN | POLLHUP)
         self.clients[client] = PyCClientWrapper(client)
         # have the server create an id, not just the fd of the client 
@@ -57,21 +57,21 @@ class Server(FDBus, Thread):
         libc.unlink.restype = c_int
         ret = libc.unlink(self.path)
         if ret == -1:
-            errno = get_errno()
-            raise UnlinkError(errno)
+            error_msg = get_error_msg()
+            raise UnlinkError(error_msg)
         if any(ret == -1 for ret in map(libc.close, self.clients)):
-            errno = get_errno()
-            raise CloseError(errno)
+            error_msg = get_error_msg()
+            raise CloseError(error_msg)
         ret = libc.close(self.sock)
         if ret == -1:
-            errno = get_errno()
-            raise CloseError(errno)
+            error_msg = get_error_msg()
+            raise CloseError(error_msg)
         self.close_pool()
 
     def server_interrupt(self, sig, frame):
         self.running = False
         self.shutdown()
-        
+
     @property
     def current_clients(self):
         return self.clients.dump()
@@ -82,10 +82,10 @@ class Server(FDBus, Thread):
     def run(self):
         # poll for incoming messages to shutdown
         if self.bind == -1:
-            errno = get_errno()
-            raise BindError(errno)
+            error_msg = get_error_msg()
+            raise BindError(error_msg)
         if self.listen == -1:
-            errno = get_errno()
+            error_msg = get_error_msg()
             raise ListenError(errno)
         self.server_event_poll.register(self.sock, POLLIN | POLLHUP)
         while self.running:
@@ -107,7 +107,7 @@ class ClientPool(object):
         try:
             del self.fd_pool[client]
         except KeyError:
-            raise UnKnownFileDescriptorError(client)
+            raise UnknownDescriptorError(client)
 
     def dump(self):
         return self.fd_pool.keys()
@@ -126,7 +126,7 @@ class ClientPool(object):
         try:
             client = self.fd_pool[item]
         except KeyError:
-            raise UnKnownFileDescriptorError(item)
+            raise UnknownDescriptorError(item)
         return client
 
     def __len__(self):
