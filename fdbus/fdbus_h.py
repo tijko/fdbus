@@ -13,6 +13,7 @@ libc = CDLL('libc.so.6', use_errno=True)
 libc.open.restype = c_int
 libc.socket.restype = c_int
 libc.accept.restype = c_int
+libc.strerror.argtype = c_int
 libc.strerror.restype = c_char_p
 
 # set command protocols for communication to server-client
@@ -72,6 +73,10 @@ MSG_SERV = c_int(0)
 socklen_t = c_uint
 size_t = c_uint
 off_t = c_longlong
+
+def get_error_msg():
+    errno = get_errno()
+    return libc.strerror(c_int(errno))
 
 
 class fdmsg(Structure):
