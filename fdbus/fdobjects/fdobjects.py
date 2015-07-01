@@ -69,8 +69,8 @@ class FileDescriptor(object):
         libc.open.restype = c_int
         fd = libc.open(path, mode)
         if fd == -1:
-            errno = get_errno()
-            raise OpenError(errno)
+            error_msg = get_error_msg()
+            raise OpenError(error_msg)
         return fd
 
 class _FileDescriptor(fdobj):
@@ -131,8 +131,8 @@ class FDBus(object):
         libc.socket.restype = c_int
         sock = libc.socket(AF_UNIX, SOCK_STREAM, PROTO_DEFAULT)
         if sock == -1:
-            errno = get_errno()
-            raise SocketError(errno)
+            error_msg = get_error_msg()
+            raise SocketError(error_msg)
         return sock
 
     def close_pool(self):
@@ -141,7 +141,7 @@ class FDBus(object):
     def get_fd(self, name):
         fdobj = self.fdpool.fdobjs.get(name)
         if fdobj is None:
-            raise UnKnownDescriptorError(name)
+            raise UnknownDescriptorError(name)
         return fdobj
 
     def send_fd(self, name, proto, recepient=None):
@@ -157,14 +157,14 @@ class FDBus(object):
         msg = pointer(msghdr(RECV))
         # set up a poll timout -- client disconnects -- will this call block indefin?
         if libc.recvmsg(sock, msg, MSG_SERV) == -1:
-            errno = get_errno()
-            raise RecvmsgError(errno)
+            error_msg = get_error_msg()
+            raise RecvmsgError(error_msg)
         self.get_cmdmsg(sock, msg)
         
     def sendmsg(self, proto, cmd, fdobj=None, client=None):
         msg = pointer(msghdr(proto, cmd, fdobj, client))
         if libc.sendmsg(self.sock, msg, MSG_SERV) == -1:
-            errno = get_errno()
+            error_msg = get_error_msg() 
             raise SendmsgError(errno)      
 
     def createfd(self, path, mode):
@@ -199,6 +199,7 @@ class FDBus(object):
         if cmd == CLS_FD:
             vector = self.unpack_vector(msg)
             self.fdpool.remove(vector.name)
+        # add check for cls all else error
 
     def ref_cmdmsg(self, sock, cmd, msg):
         pass
