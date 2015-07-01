@@ -21,8 +21,8 @@ class Client(FDBus):
         self.client_address.contents.sun_path = self.path
         if (libc.connect(self.sock, cast(self.client_address, 
                          POINTER(sockaddr)), sizeof(sockaddr_un)) == -1):
-            errno = get_errno()
-            raise ConnectError(errno)
+            error_msg = get_error_msg()
+            raise ConnectError(error_msg)
         self.connected = True
        
     def writefd(self):
