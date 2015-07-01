@@ -10,15 +10,15 @@ class SocketError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.socket
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.socket error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.socket error: %s" % self.msg
 
 
 class ListenError(Exception):
@@ -27,15 +27,15 @@ class ListenError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.listen
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.listen error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.listen error: %s" % self.msg
     
 
 class BindError(Exception):
@@ -44,15 +44,15 @@ class BindError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.bind
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.bind error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.bind error: %s" % self.msg
 
 
 class AcceptError(Exception):
@@ -61,15 +61,15 @@ class AcceptError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.accept
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.accept error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.accept error: %s" % self.msg
 
 
 class SendmsgError(Exception):
@@ -78,15 +78,15 @@ class SendmsgError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.sendmsg
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.sendmsg error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.sendmsg error: %s" % self.msg
 
 
 class ConnectError(Exception):
@@ -95,15 +95,15 @@ class ConnectError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.connect
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.connect error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.connect error: %s" % self.msg
 
 
 class RecvmsgError(Exception):
@@ -112,15 +112,15 @@ class RecvmsgError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.recvmsg
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.recvmsg error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.recvmsg error: %s" % self.msg
 
 
 class ReadError(Exception):
@@ -129,15 +129,15 @@ class ReadError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.read
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.read error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.read error: %s" % self.msg
 
 
 class WriteError(Exception):
@@ -146,15 +146,15 @@ class WriteError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.write
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.write error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.write error: %s" % self.msg
 
 
 class OpenError(Exception):
@@ -163,15 +163,15 @@ class OpenError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.open
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.open error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.open error: %s" % self.msg
 
 
 class CloseError(Exception):
@@ -180,15 +180,15 @@ class CloseError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.close
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.close error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.close error: %s" % self.msg
 
 
 class LseekError(Exception):
@@ -197,15 +197,15 @@ class LseekError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.lseek
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.lseek error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.lseek error: %s" % self.msg
 
 
 class StatError(Exception):
@@ -214,15 +214,15 @@ class StatError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.stat
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.stat error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.stat error: %s" % self.msg
 
 
 class FileDescriptorError(Exception):
@@ -264,15 +264,15 @@ class UnlinkError(Exception):
         Exception class raised in the event of an error returned from a call to
         libc.unlink.
 
-        The errno is propagated from the system call giving a more descriptive
+        The msg is propagated from the system call giving a more descriptive
         reason for the fail.
     """
 
-    def __init__(self, errno):
-        self.errno = errno
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return "libc.unlink error: %s" % libc.strerror(c_int(self.errno))
+        return "libc.unlink error: %s" % self.msg
 
 
 class UnknownDescriptorError(Exception):
