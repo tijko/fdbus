@@ -64,22 +64,21 @@ class FDBusClientClosingTest(unittest.TestCase):
     def test_server_remove_clientfd(self):
         test_client.remove(test_fd_name)
         pool = test_server.fdpool.fdobjs
-        sleep(1)
         self.assertTrue(len(pool) == 0)
 
 
-def display_suite_errors(errors):
+def display_test_errors(errors):
     for error in errors:
         print ''.join(['\n' + str(error[0]) + '\n'] + list(error[1:]))
 
-def run_suite(test):
+def run_test(test):
     suite = unittest.TestSuite()
     result = unittest.TestResult()
     result.buffer = True
     suite.addTest(test)
     suite.run(result)
     print result
-    map(display_suite_errors, [result.errors, result.failures])
+    map(display_test_errors, [result.errors, result.failures])
     
 
 if __name__ == '__main__':
@@ -108,6 +107,6 @@ if __name__ == '__main__':
     tests = [suiteServer, suiteClient, suiteClientcls, suiteServercls]
     for test in tests:
         sleep(1)
-        run_suite(test)
+        run_test(test)
     test_server.running = False
     os.remove(test_fd_path)
