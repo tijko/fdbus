@@ -27,32 +27,32 @@ libc.strerror.restype = c_char_p
 LOAD = 0x0
 LOAD_RDONLY = 0x0
 LOAD_WRONLY = 0x1
-LOAD_RDWR = 0x2
+LOAD_RDWR   = 0x2
 
 RECV = 0x1
 
 PASS = 0x10
 PEER_DUMP = 0x10
 PEER_RECV = 0x20
-PASS_FD = 0x40
+PASS_FD   = 0x40
 
 CLOSE = 0x100
-CLS_FD = 0x100
+CLS_FD  = 0x100
 CLS_ALL = 0x200
 
 REFERENCE = 0x200
-RET_FD = 0x100
+RET_FD    = 0x100
 REFCNT_FD = 0x200
 
 # linux values 
 SOCK_ADDRDATA_SZ = 14
-UNIX_PATH_MAX = 108
+UNIX_PATH_MAX    = 108
 
 FDBUS_IOVLEN = 0x1
 
-O_RDONLY = c_int(0)
-O_WRONLY = c_int(1)
-O_RDWR = c_int(2)
+O_RDONLY = 0x0
+O_WRONLY = 0x1
+O_RDWR   = 0x2
 
 SCM_RIGHTS = c_int(0x01)
 SOL_SOCKET = c_int(0x01)
@@ -62,8 +62,8 @@ SEEK_CUR = 1
 SEEK_END = 2
 
 PROTO_DEFAULT = 0
-SOCK_STREAM = 1
-AF_UNIX = 1
+SOCK_STREAM   = 1
+AF_UNIX       = 1
 
 DEFAULT_CLIENTS = 3
 
@@ -80,6 +80,20 @@ def get_error_msg():
     return libc.strerror(c_int(errno))
 
 
+class peermsg(Structure):
+
+    _fields_ = [('length', c_int), ('peers', c_void_p)]
+
+    def __init__(self, peers=None):
+        if peers is None:
+            self.length = c_int(0)
+            self.peers = c_void_p()
+        else:
+            peer_array = ARRAY(c_int, len(peers))
+            self.length = c_int(len(peers))
+            self.peers = cast(c_void_p, peer_array(peers))
+            
+
 class fdmsg(Structure):
 
     _fields_ = [('protocol', c_int), ('command', c_int), ('name', c_char_p),
@@ -88,7 +102,7 @@ class fdmsg(Structure):
 
     def __init__(self, proto, cmd=None, fdobj=None, client=None):
         self.protocol = proto
-        self.command = cmd if cmd else c_int(0)
+        self.command = c_int(cmd) if cmd else c_int(0)
         self.client = c_int(-1) if client is None else c_int(client)
         if fdobj is None:
             self.name = self.path = self.created = c_char_p(None)
@@ -97,7 +111,7 @@ class fdmsg(Structure):
             self.name = c_char_p(fdobj.name)
             self.path = c_char_p(fdobj.path)
             self.created = c_char_p(fdobj.created)
-            self.mode = fdobj.mode
+            self.mode = c_int(fdobj.mode)
 
 class sockaddr(Structure):
 
@@ -152,9 +166,10 @@ class msghdr(Structure):
             ctrl_msg = pointer(cmsghdr(fdobj.fd))
         else:
             raise MsghdrError('InvalidArg fd needs cmd')
-        if cmd & (PEER_DUMP | PEER_RECV):
-            # create peer structure
-        iov_base = pointer(fdmsg(proto, cmd, fdobj, client))
+        if cmd is not None and (PEER_DUMP | PEER_RECV) & cmd:
+            iov_base = fdobj
+        else:
+            iov_base = pointer(fdmsg(proto, cmd, fdobj, client))
         self.msg_iov = pointer(iovec(iov_base))
         self.msg_iovlen = size_t(FDBUS_IOVLEN)
         self.msg_control = cast(ctrl_msg, c_void_p)
