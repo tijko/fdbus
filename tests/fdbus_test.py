@@ -63,6 +63,7 @@ class FDBusClientClosingTest(unittest.TestCase):
 
     def test_server_remove_clientfd(self):
         test_client.remove(test_fd_name)
+        sleep(1)
         pool = test_server.fdpool.fdobjs
         self.assertTrue(len(pool) == 0)
 
