@@ -43,7 +43,8 @@ class Client(FDBus):
 
     def getpeers(self):
         self.sendmsg(PASS, PEER_DUMP)
-        self.recvmsg(self.sock, PEER_RECV)
+        peers = cast(c_void_p, pointer(peermsg(None)))
+        self.recvmsg(self.sock, PEER_RECV, peers)
 
     def readfd(self, fd):
         rd_buffer = (c_char * 2048)()
