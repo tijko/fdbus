@@ -14,6 +14,7 @@ class Client(FDBus):
         super(Client, self).__init__(path)
         self.sock = self.socket() 
         self.connected = False
+        self.peers = None
 
     def connect(self):
         self.client_address = pointer(sockaddr_un(AF_UNIX, self.path))
@@ -41,7 +42,8 @@ class Client(FDBus):
         self.send_fd(name, LOAD)
 
     def getpeers(self):
-        pass
+        self.sendmsg(PASS, PEER_DUMP)
+        self.recvmsg(self.sock, PEER_RECV)
 
     def readfd(self, fd):
         rd_buffer = (c_char * 2048)()
