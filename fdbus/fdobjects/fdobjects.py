@@ -157,8 +157,8 @@ class FDBus(object):
         fdobj = self.get_fd(name)
         self.sendmsg(CLOSE, CLS_FD, fdobj[1])
 
-    def recvmsg(self, sock, cmd=None):
-        msg = pointer(msghdr(RECV, cmd))
+    def recvmsg(self, sock, cmd=None, fdobj=None):
+        msg = pointer(msghdr(RECV, cmd, fdobj))
         # set up a poll timout -- client disconnects -- will this call block indefin?
         if libc.recvmsg(sock, msg, MSG_SERV) == -1:
             error_msg = get_error_msg()
