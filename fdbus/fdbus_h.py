@@ -32,8 +32,9 @@ LOAD_RDWR = 0x2
 RECV = 0x1
 
 PASS = 0x10
-PEER_DUMP = 0x10 
-PASS_FD = 0x20
+PEER_DUMP = 0x10
+PEER_RECV = 0x20
+PASS_FD = 0x40
 
 CLOSE = 0x100
 CLS_FD = 0x100
@@ -147,10 +148,12 @@ class msghdr(Structure):
         # will have an empty array assigned to its data field.
         if proto == RECV:	
             ctrl_msg = CTRL_MSG_RECV()
-        elif cmd is not None:
+        elif cmd is not None and not (PEER_DUMP | PEER_RECV) & cmd:
             ctrl_msg = pointer(cmsghdr(fdobj.fd))
         else:
             raise MsghdrError('InvalidArg fd needs cmd')
+        if cmd & (PEER_DUMP | PEER_RECV):
+            # create peer structure
         iov_base = pointer(fdmsg(proto, cmd, fdobj, client))
         self.msg_iov = pointer(iovec(iov_base))
         self.msg_iovlen = size_t(FDBUS_IOVLEN)
