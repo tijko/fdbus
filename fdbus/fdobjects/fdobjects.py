@@ -124,7 +124,7 @@ class FDBus(object):
         super(FDBus, self).__init__()
         self.path = path
         self.fdpool = FileDescriptorPool() 
-        self.cmd_funcs = {LOAD:self.ld_cmdmsg, PASS:self.ld_cmdmsg,
+        self.cmd_funcs = {LOAD:self.ld_cmdmsg, PASS:self.pass_cmdmsg,
                           CLOSE:self.cls_cmdmsg, REFERENCE:self.ref_cmdmsg}
 
     def socket(self):
@@ -136,7 +136,11 @@ class FDBus(object):
         return sock
 
     def close_pool(self):
-        pass
+        pool = self.fdpool.fdobjs
+        for fd in pool:
+            pool[fd][1].fclose()
+        for fd in self.fdpool.client_fdobjs:
+            libc.close(fd)
 
     def get_fd(self, name):
         fdobj = self.fdpool.fdobjs.get(name)
@@ -153,8 +157,8 @@ class FDBus(object):
         fdobj = self.get_fd(name)
         self.sendmsg(CLOSE, CLS_FD, fdobj[1])
 
-    def recvmsg(self, sock):
-        msg = pointer(msghdr(RECV))
+    def recvmsg(self, sock, cmd=None):
+        msg = pointer(msghdr(RECV, cmd))
         # set up a poll timout -- client disconnects -- will this call block indefin?
         if libc.recvmsg(sock, msg, MSG_SERV) == -1:
             error_msg = get_error_msg()
@@ -163,7 +167,8 @@ class FDBus(object):
         
     def sendmsg(self, proto, cmd, fdobj=None, client=None):
         msg = pointer(msghdr(proto, cmd, fdobj, client))
-        if libc.sendmsg(self.sock, msg, MSG_SERV) == -1:
+        receipent = client if client else self.sock
+        if libc.sendmsg(receipent, msg, MSG_SERV) == -1:
             error_msg = get_error_msg() 
             raise SendmsgError(error_msg) 
 
@@ -181,19 +186,32 @@ class FDBus(object):
         vector = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
         return vector
 
-    def ld_cmdmsg(self, sock, cmd, msg):
+    def extract_fd(self, cmd, msg):
         vector = self.unpack_vector(msg)
         name = vector.name
         path = vector.path
+        client = vector.client
         mode = cmd
         created = vector.created
         fd = CMSG_DATA(msg.msg_control)
         fdobj = FileDescriptor(name=name, path=path, fd=fd, mode=mode, 
-                               client=sock, created=created)
+                               client=client, created=created)
+        return fdobj
+        
+    def ld_cmdmsg(self, sock, cmd, msg):
+        fdobj = self.extract_fd(cmd, msg)
         self.fdpool.add(sock, fdobj) 
 
     def pass_cmdmsg(self, sock, cmd, msg):
-        pass
+        if cmd == PEER_DUMP:
+            peers = self.fdpool.client_fdobjs.keys()
+            self.sendmsg(PASS, PEER_RECV, peers, sock)
+        elif cmd == PEER_RECV:
+            vector = self.unpack_vector(msg)
+            self.peers = vector.fdobj
+        else:
+            fdobj = self.extract_fd(cmd, msg)
+            self.sendmsg(RECV, cmd, fdobj, fdobj.client)
 
     def cls_cmdmsg(self, sock, cmd, msg):
         if cmd == CLS_FD:
