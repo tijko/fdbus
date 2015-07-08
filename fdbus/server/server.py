@@ -89,7 +89,7 @@ class Server(FDBus, Thread):
             raise ListenError(errno)
         self.server_event_poll.register(self.sock, POLLIN | POLLHUP)
         while self.running:
-            events = self.server_event_poll.poll(2)
+            events = self.server_event_poll.poll(1)
             if events:
                 if events[0][0] == self.sock:
                     self.accept()            
