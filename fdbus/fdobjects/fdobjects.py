@@ -165,7 +165,7 @@ class FDBus(object):
         msg = pointer(msghdr(proto, cmd, fdobj, client))
         if libc.sendmsg(self.sock, msg, MSG_SERV) == -1:
             error_msg = get_error_msg() 
-            raise SendmsgError(errno)      
+            raise SendmsgError(error_msg) 
 
     def createfd(self, path, mode):
         fdobj = FileDescriptor(path=path, mode=mode, client=self)
