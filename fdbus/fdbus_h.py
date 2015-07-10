@@ -160,13 +160,13 @@ class msghdr(Structure):
         # With the cmsghdr its the similiar idea, where the "sender" will 
         # have the struct initialized with its data set and the "receiver"
         # will have an empty array assigned to its data field.
-        if proto == RECV:	
+        if proto == RECV or cmd is not None and (PEER_DUMP | PEER_RECV) & cmd:	
             ctrl_msg = CTRL_MSG_RECV()
         elif cmd is not None and not (PEER_DUMP | PEER_RECV) & cmd:
             ctrl_msg = pointer(cmsghdr(fdobj.fd))
         else:
             raise MsghdrError('InvalidArg fd needs cmd')
-        if cmd is not None and (PEER_DUMP | PEER_RECV) & cmd:
+        if cmd is not None and PEER_RECV & cmd:
             iov_base = fdobj
         else:
             iov_base = pointer(fdmsg(proto, cmd, fdobj, client))
