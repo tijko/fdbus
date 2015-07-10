@@ -58,6 +58,11 @@ class FDBusClientTest(unittest.TestCase):
         test_fd = pool.fdobjs[test_fd_name][1]
         self.assertTrue(test_fd.mode == O_RDONLY)
 
+    def test_client_peers(self):
+        test_client.getpeers()
+        peers = test_client.peers
+        self.assertTrue(len(peers) == 1)
+
 
 class FDBusClientClosingTest(unittest.TestCase):
 
