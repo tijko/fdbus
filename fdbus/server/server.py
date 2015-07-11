@@ -4,14 +4,14 @@
 from time import ctime
 from threading import Thread
 from signal import signal, SIGINT
-from select import poll, POLLIN, POLLHUP
+from select import poll, POLLIN, POLLHUP, POLLNVAL
 
 from ..fdbus_h import *
 from ..exceptions.exceptions import *
 from ..fdobjects.fdobjects import FileDescriptorPool, FileDescriptor, FDBus
 
 
-class Server(FDBus, Thread):
+class Server(FDBus):#, Thread):
 
     def __init__(self, path):
         super(Server, self).__init__(path)
@@ -19,6 +19,7 @@ class Server(FDBus, Thread):
         self.server_event_poll = poll()
         self.running = True
         self.sock = self.socket()
+        self.event_mask = POLLIN | POLLHUP | POLLNVAL
         signal(SIGINT, self.server_interrupt)
 
     @property
@@ -40,17 +41,20 @@ class Server(FDBus, Thread):
         if client == -1:
             error_msg = get_error_msg()
             raise AcceptError(error_msg)
-        self.server_event_poll.register(client, POLLIN | POLLHUP)
+        self.server_event_poll.register(client, self.event_mask)
         self.clients[client] = PyCClientWrapper(client)
         # have the server create an id, not just the fd of the client 
         # connection.  then send it back to client
 
     def client_ev(self, client, ev):
-        if ev == POLLHUP:
+        if ev & (POLLHUP | POLLNVAL):
+            # set up array of functions to take
+            # point to which one occured
             libc.close(client)
-            del self.clients[client]
+            self.server_event_poll.unregister(client)
+            self.clients.remove(client)
         else:
-            self.recvmsg(client)
+            self.recvmsg(client, RECV_CMD)
 
     def shutdown(self):
         libc.close.restype = c_int
@@ -87,7 +91,7 @@ class Server(FDBus, Thread):
         if self.listen == -1:
             error_msg = get_error_msg()
             raise ListenError(errno)
-        self.server_event_poll.register(self.sock, POLLIN | POLLHUP)
+        self.server_event_poll.register(self.sock, self.event_mask)
         while self.running:
             events = self.server_event_poll.poll(1)
             if events:
@@ -101,36 +105,36 @@ class Server(FDBus, Thread):
 class ClientPool(object):
         
     def __init__(self):
-        self.fd_pool = {} 
+        self.fdpool = {} 
 
     def remove(self, client):
-        try:
-            del self.fd_pool[client]
-        except KeyError:
-            raise UnknownDescriptorError(client)
-
+        del self.fdpool[client]
+    
     def dump(self):
-        return self.fd_pool.keys()
+        return self.fdpool.keys()
 
     def __len__(self):
-        return len(self.fd_pool)
+        return len(self.fdpool)
 
     def __iter__(self):
-        for fd in self.fd_pool:
+        for fd in self.fdpool:
             yield fd
 
     def __setitem__(self, item, value):
-        self.fd_pool[item] = value
+        self.fdpool[item] = value
 
     def __getitem__(self, item):
         try:
-            client = self.fd_pool[item]
+            client = self.fdpool[item]
         except KeyError:
             raise UnknownDescriptorError(item)
         return client
 
     def __len__(self):
-        return len(self.fd_pool)
+        return len(self.fdpool)
+
+    def __str__(self):
+        return str(self.fdpool)
 
 
 class PyCClientWrapper(object):
