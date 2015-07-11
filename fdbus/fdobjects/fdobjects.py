@@ -157,17 +157,19 @@ class FDBus(object):
         fdobj = self.get_fd(name)
         self.sendmsg(CLOSE, CLS_FD, fdobj[1])
 
-    def recvmsg(self, sock, cmd=None, fdobj=None):
-        msg = pointer(msghdr(RECV, cmd, fdobj))
+    def recvmsg(self, sock, cmd, fdobj=None):
+        print sock, cmd, fdobj
+        msg = pointer(msghdr(RECV, cmd, fdobj)) # XXX set sock here then look in received msg?
         # set up a poll timout -- client disconnects -- will this call block indefin?
+        print msg.contents
         if libc.recvmsg(sock, msg, MSG_SERV) == -1:
             error_msg = get_error_msg()
             raise RecvmsgError(error_msg)
         self.get_cmdmsg(sock, msg)
-        
+
     def sendmsg(self, proto, cmd, fdobj=None, client=None):
         msg = pointer(msghdr(proto, cmd, fdobj, client))
-        receipent = client if client else self.sock
+        receipent = client if client is not None else self.sock
         if libc.sendmsg(receipent, msg, MSG_SERV) == -1:
             error_msg = get_error_msg() 
             raise SendmsgError(error_msg) 
@@ -180,7 +182,10 @@ class FDBus(object):
         msg = msg.contents
     	fmsg = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
         protocol = fmsg.protocol
-        self.cmd_funcs[protocol](sock, fmsg.command, msg)
+        try:
+            self.cmd_funcs[protocol](sock, fmsg.command, msg)
+        except KeyError:
+            print 'Invalid protocol %d' % protocol
 
     def unpack_vector(self, msg):
         vector = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
