@@ -30,11 +30,13 @@ LOAD_WRONLY = 0x1
 LOAD_RDWR   = 0x2
 
 RECV = 0x1
+RECV_FD   = 0x1
+RECV_PEER = 0x2
+RECV_CMD  = 0x4
 
 PASS = 0x10
-PEER_DUMP = 0x10
-PEER_RECV = 0x20
-PASS_FD   = 0x40
+PASS_FD   = 0x10
+PASS_PEER = 0x20
 
 CLOSE = 0x100
 CLS_FD  = 0x100
@@ -89,8 +91,9 @@ class peermsg(Structure):
             self.length = c_int(0)
             self.peers = c_void_p()
         else:
-            peer_array = ARRAY(c_int, len(peers))
-            self.length = c_int(len(peers))
+            peer_length = len(peers)
+            peer_array = ARRAY(c_int, peer_length)
+            self.length = c_int(peer_length)
             self.peers = cast(c_void_p, peer_array(peers))
             
 
@@ -145,7 +148,7 @@ class msghdr(Structure):
                 ('msg_control', c_void_p), ('msg_controllen', size_t),
                 ('msg_flags', c_int)]
 
-    def __init__(self, proto, cmd=None, fdobj=None, client=None):
+    def __init__(self, proto, cmd, fdobj=None, client=None):
         # If no 'fd' parameter is passed and no 'cmd' parameter is passed upon 
         # initialization, this is a header for a "receiver" call.  Otherwise 
         # this will initialized for a "sender" call, which will need a slightly 
@@ -160,13 +163,11 @@ class msghdr(Structure):
         # With the cmsghdr its the similiar idea, where the "sender" will 
         # have the struct initialized with its data set and the "receiver"
         # will have an empty array assigned to its data field.
-        if proto == RECV or cmd is not None and (PEER_DUMP | PEER_RECV) & cmd:
+        if proto == RECV:
             ctrl_msg = CTRL_MSG_RECV()
-        elif cmd is not None and not (PEER_DUMP | PEER_RECV) & cmd:
-            ctrl_msg = pointer(cmsghdr(fdobj.fd))
         else:
-            raise MsghdrError('InvalidArg fd needs cmd')
-        if cmd is not None and PEER_RECV & cmd:
+            ctrl_msg = pointer(cmsghdr(fdobj.fd))
+        if cmd == PASS_PEER:
             iov_base = fdobj
         else:
             iov_base = pointer(fdmsg(proto, cmd, fdobj, client))
