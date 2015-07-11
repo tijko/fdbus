@@ -42,9 +42,10 @@ class Client(FDBus):
         self.send_fd(name, LOAD)
 
     def getpeers(self):
-        self.sendmsg(PASS, PEER_DUMP)
+        #self.sendmsg(PASS, PEER_DUMP)
+        self.loadfd('test_fdbus_file')
         peers = pointer(peermsg(None))
-        self.recvmsg(self.sock, PEER_RECV, peers)
+        self.recvmsg(self.sock, RECV_PEER, peers)
 
     def readfd(self, fd):
         rd_buffer = (c_char * 2048)()
