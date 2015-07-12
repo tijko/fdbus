@@ -11,7 +11,7 @@ from ..exceptions.exceptions import *
 from ..fdobjects.fdobjects import FileDescriptorPool, FileDescriptor, FDBus
 
 
-class Server(FDBus):#, Thread):
+class Server(FDBus, Thread):
 
     def __init__(self, path):
         super(Server, self).__init__(path)
