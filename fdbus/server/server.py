@@ -11,7 +11,7 @@ from ..exceptions.exceptions import *
 from ..fdobjects.fdobjects import FileDescriptorPool, FileDescriptor, FDBus
 
 
-class Server(FDBus, Thread):
+class Server(FDBus):#, Thread):
 
     def __init__(self, path):
         super(Server, self).__init__(path)
@@ -34,7 +34,6 @@ class Server(FDBus, Thread):
         return libc.bind(self.sock, self.serv_sk_addr, server_size)
 
     def accept(self):
-        libc.accept.restype = c_int
         client_size = c_int(sizeof(sockaddr_un))
         client_size_ptr = pointer(client_size)
         client = libc.accept(self.sock, self.serv_sk_addr, client_size_ptr)
@@ -54,11 +53,17 @@ class Server(FDBus, Thread):
             self.server_event_poll.unregister(client)
             self.clients.remove(client)
         else:
-            self.recvmsg(client, RECV_CMD)
+            client_req_buffer = cast(REQ_BUFFER(), c_void_p)
+            ret = libc.recv(client, client_req_buffer, MSG_LEN, MSG_FLAGS)
+            if ret == -1:
+                error_msg = get_error_msg()
+                # raise
+            msg_raw = cast(client_req_buffer, c_char_p).value
+            msg = msg_raw.split(':')
+            self.recvmsg(client, RECV_CMD, msg)
+            print self.fdpool.fdobjs
 
     def shutdown(self):
-        libc.close.restype = c_int
-        libc.unlink.restype = c_int
         ret = libc.unlink(self.path)
         if ret == -1:
             error_msg = get_error_msg()
