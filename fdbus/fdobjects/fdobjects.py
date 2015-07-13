@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
+from os import fdopen
 from os import fstat as stat
-from time import ctime
+from time import ctime, time
 
 from ..fdbus_h import *
 from ..exceptions.exceptions import *
@@ -61,12 +62,11 @@ class FileDescriptor(object):
         if fd is None:
             fd = FileDescriptor.fopen(path, mode)
         client = kwargs.get('client')
-        created = ctime()
+        created = time()
         return _FileDescriptor(name, path, fd, mode, client, created)
 
     @staticmethod
     def fopen(path, mode):
-        libc.open.restype = c_int
         fd = libc.open(path, mode)
         if fd == -1:
             error_msg = get_error_msg()
@@ -125,10 +125,10 @@ class FDBus(object):
         self.path = path
         self.fdpool = FileDescriptorPool() 
         self.cmd_funcs = {LOAD:self.ld_cmdmsg, PASS:self.pass_cmdmsg,
-                          CLOSE:self.cls_cmdmsg, REFERENCE:self.ref_cmdmsg}
+                          RECV:self.recv_cmdmsg, CLOSE:self.cls_cmdmsg, 
+                          REFERENCE:self.ref_cmdmsg}
 
     def socket(self):
-        libc.socket.restype = c_int
         sock = libc.socket(AF_UNIX, SOCK_STREAM, PROTO_DEFAULT)
         if sock == -1:
             error_msg = get_error_msg()
@@ -148,26 +148,44 @@ class FDBus(object):
             raise UnknownDescriptorError(name)
         return fdobj
 
-    def send_fd(self, name, proto, recepient=None):
-        fdobj = self.get_fd(name)
-        cmd = fdobj[1].mode if recepient is None else PASS_FD
-        self.sendmsg(proto, cmd, fdobj[1], recepient)
+    def send_fd(self, protocol, name, recepient=None):
+        fdobj = self.get_fd(name)[1]
+        cmd = fdobj.mode if recepient is None else PASS_FD
+        req_buffer = REQ_BUFFER()
+        request = ':'.join([PROTOCOL_NAMES[protocol], COMMAND_NAMES[cmd], 
+                            name, fdobj.path, str(fdobj.fd), 
+                            str(fdobj.mode), str(fdobj.created)])
+        req_buffer.value = request
+        ret = libc.send(self.sock, cast(req_buffer, c_void_p), 
+                         MSG_LEN, MSG_FLAGS)
+        if ret == -1:
+            error_msg = get_error_msg()
+            # raise
+        self.sendmsg(protocol, cmd, fdobj.fd, recepient)
 
     def remove_fd(self, name):
         fdobj = self.get_fd(name)
         self.sendmsg(CLOSE, CLS_FD, fdobj[1])
 
-    def recvmsg(self, sock, cmd, fdobj=None):
-        msg = pointer(msghdr(RECV, cmd, fdobj)) # XXX set sock here then look in received msg?
+    def recvmsg(self, sock, cmd, payload=None):
+        msg = pointer(msghdr(RECV, cmd, payload))
         # set up a poll timout -- client disconnects -- will this call block indefin?
         if libc.recvmsg(sock, msg, MSG_SERV) == -1:
             error_msg = get_error_msg()
             raise RecvmsgError(error_msg)
-        self.get_cmdmsg(sock, msg)
+        # use cmd to branch methods accordingly --> payload cmd
+        if cmd == RECV_CMD:
+            fd = self.extract_fd(msg)
+            fo = fdopen(fd)    
+            print fo.read()
+            fdobj = FileDescriptor(name=payload[2], path=payload[3], fd=fd, 
+                                   mode=int(payload[5]), client=sock, 
+                                   created=float(payload[6]))
+            self.fdpool.add(sock, fdobj)
 
-    def sendmsg(self, proto, cmd, fdobj=None, client=None):
-        msg = pointer(msghdr(proto, cmd, fdobj, client))
+    def sendmsg(self, protocol, cmd, payload=None, client=None):
         receipent = client if client is not None else self.sock
+        msg = pointer(msghdr(protocol, cmd, payload, client))
         if libc.sendmsg(receipent, msg, MSG_SERV) == -1:
             error_msg = get_error_msg() 
             raise SendmsgError(error_msg) 
@@ -177,50 +195,56 @@ class FDBus(object):
         self.fdpool.add(self, fdobj)
 
     def get_cmdmsg(self, sock, msg):
-        msg = msg.contents
-    	fmsg = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
         protocol = fmsg.protocol
         try:
             self.cmd_funcs[protocol](sock, fmsg.command, msg)
         except KeyError:
             print 'Invalid protocol %d' % protocol
 
-    def unpack_vector(self, msg):
-        vector = cast(msg.msg_iov.contents.iov_base, POINTER(fdmsg)).contents
-        return vector
-
-    def extract_fd(self, cmd, msg):
-        vector = self.unpack_vector(msg)
-        name = vector.name
-        path = vector.path
-        client = vector.client
-        mode = cmd
-        created = vector.created
-        fd = CMSG_DATA(msg.msg_control)
-        fdobj = FileDescriptor(name=name, path=path, fd=fd, mode=mode, 
-                               client=client, created=created)
-        return fdobj
+    def extract_fd(self, msg):
+        fd = CMSG_DATA(msg.contents.msg_control)
+        return fd
         
     def ld_cmdmsg(self, sock, cmd, msg):
-        fdobj = self.extract_fd(cmd, msg)
+        fdobj = self.extract_fdobj(cmd, msg)
         self.fdpool.add(sock, fdobj) 
 
-    def pass_cmdmsg(self, sock, cmd, msg):
-        if cmd == PEER_DUMP:
-            peers = self.fdpool.client_fdobjs.keys()
-            self.sendmsg(PASS, PEER_RECV, peers, sock)
-        elif cmd == PEER_RECV:
-            vector = self.unpack_vector(msg)
-            self.peers = vector.fdobj
+    def recv_cmdmsg(self, sock, cmd, msg):
+        if cmd == RECV_PEER:
+            pass
+        elif cmd == RECV_FD:
+            pass
+        elif cmd == RECV_CMD:
+            pass
         else:
-            fdobj = self.extract_fd(cmd, msg)
+            #raise invalid cmd
+            return
+        
+    def pass_cmdmsg(self, sock, cmd, msg):
+        if cmd == PASS_PEER:
+            self.sendmsg(PASS, PEER_RECV, peers, sock)
+        elif cmd == PASS_FD:
+            fdobj = self.extract_fdobj(cmd, msg)
             self.sendmsg(RECV, cmd, fdobj, fdobj.client)
+        else:
+            #raise invalid cmd
+            return
 
     def cls_cmdmsg(self, sock, cmd, msg):
         if cmd == CLS_FD:
             vector = self.unpack_vector(msg)
             self.fdpool.remove(vector.name)
-        # add check for cls all else error
+        elif cmd == CLS_ALL:
+            pass
+        else:
+            #raise invalid cmd
+            return
 
     def ref_cmdmsg(self, sock, cmd, msg):
-        pass
+        if cmd == RET_FD:
+            pass
+        elif cmd == REFCNT_FD:
+            pass
+        else:
+            #raise invalid cmd
+            return
