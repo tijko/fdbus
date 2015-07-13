@@ -36,16 +36,22 @@ class Client(FDBus):
         self.remove_fd(name)        
 
     def passfd(self, name, peer):
-        self.send_fd(name, PASS, peer)
+        self.send_fd(PASS, name, peer)
 
     def loadfd(self, name):
-        self.send_fd(name, LOAD)
+        # depending on function, protocol is not needed for formatting
+        # of the request message.
+        #
+        # with loadfd the name (if a valid fdobj) can reference the fd
+        # attributes and affiliated data.
+        #
+        # 'LOAD:LOAD_RDONLY:testfile:/home/tijko/testfile/created:1233492.3929' 
+        libc.send
+        self.send_fd(LOAD, name)
 
     def getpeers(self):
-        #self.sendmsg(PASS, PEER_DUMP)
-        self.loadfd('test_fdbus_file')
-        peers = pointer(peermsg(None))
-        self.recvmsg(self.sock, RECV_PEER, peers)
+        self.sendmsg(PASS, PEER_DUMP)
+        self.recvmsg(self.sock, RECV, RECV_PEER)
 
     def readfd(self, fd):
         rd_buffer = (c_char * 2048)()
