@@ -11,7 +11,7 @@ from ..exceptions.exceptions import *
 from ..fdobjects.fdobjects import FileDescriptorPool, FileDescriptor, FDBus
 
 
-class Server(FDBus):#, Thread):
+class Server(FDBus, Thread):
 
     def __init__(self, path):
         super(Server, self).__init__(path)
@@ -61,7 +61,6 @@ class Server(FDBus):#, Thread):
             msg_raw = cast(client_req_buffer, c_char_p).value
             msg = msg_raw.split(':')
             self.recvmsg(client, RECV_CMD, msg)
-            print self.fdpool.fdobjs
 
     def shutdown(self):
         ret = libc.unlink(self.path)
