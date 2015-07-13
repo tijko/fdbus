@@ -3,7 +3,7 @@
 
 from ctypes import c_int, c_uint, c_longlong, c_ushort, c_char, \
                    c_void_p, c_char_p, POINTER, pointer, cast, \
-                   sizeof, Structure, CDLL, get_errno
+                   sizeof, Structure, CDLL, get_errno, ARRAY
 
 from exceptions.exceptions import *
 from collections import defaultdict
@@ -11,6 +11,10 @@ from collections import defaultdict
 libc = CDLL('libc.so.6', use_errno=True)
 
 libc.open.restype = c_int
+libc.recv.restype = c_int
+libc.send.restype = c_int
+libc.close.restype = c_int
+libc.unlink.restype = c_int
 libc.socket.restype = c_int
 libc.accept.restype = c_int
 libc.strerror.argtype = c_int
@@ -45,6 +49,35 @@ CLS_ALL = 0x200
 REFERENCE = 0x200
 RET_FD    = 0x100
 REFCNT_FD = 0x200
+
+# XXX good spot to hold??
+PATH_MAX    = 0x400
+FNAME_MAX   = 0x100
+CREATED_MAX = 0x10
+PROTO_MAX   = 0x8
+MODE_MAX    = 0x8 
+FD_MAX      = 0x8
+
+REQ_MSG_MAX = sum([PATH_MAX, FNAME_MAX, CREATED_MAX, 
+                   PROTO_MAX, MODE_MAX, FD_MAX])
+ 
+REQ_BUFFER = ARRAY(c_char, REQ_MSG_MAX - 1)
+
+MSG_FLAGS = c_int(0)
+MSG_LEN = c_int(REQ_MSG_MAX)
+
+PROTOCOL_NAMES = {LOAD:'LOAD', RECV:'RECV', PASS:'PASS', 
+                  CLOSE:'CLOSE', REFERENCE:'REFERENCE'}
+
+PROTOCOL_NUMBERS = {v:k for v,k in PROTOCOL_NAMES.items()}
+
+COMMAND_NAMES = {LOAD_RDONLY:'LOAD_RDONLY', LOAD_WRONLY:'LOAD_WRONLY', 
+                 LOAD_RDWR:'LOAD_RDWR', RECV_FD:'RECV_FD', 
+                 RECV_PEER:'RECV_PEER', RECV_CMD:'RECV_CMD', PASS_FD:'PASS_FD',
+                 PASS_PEER:'PASS_PEER', CLS_FD:'CLS_FD', CLS_ALL:'CLS_ALL',
+                 RET_FD:'RET_FD', REFCNT_FD:'REFCNT_FD'}
+
+COMMAND_NUMBERS = {v:k for k,v in COMMAND_NAMES.items()}
 
 # linux values 
 SOCK_ADDRDATA_SZ = 14
@@ -97,25 +130,6 @@ class peermsg(Structure):
             self.peers = cast(c_void_p, peer_array(peers))
             
 
-class fdmsg(Structure):
-
-    _fields_ = [('protocol', c_int), ('command', c_int), ('name', c_char_p),
-                ('path', c_char_p), ('created', c_char_p), ('mode', c_int),
-                ('client', c_int)]
-
-    def __init__(self, proto, cmd=None, fdobj=None, client=None):
-        self.protocol = proto
-        self.command = c_int(cmd) if cmd else c_int(0)
-        self.client = c_int(-1) if client is None else c_int(client)
-        if fdobj is None:
-            self.name = self.path = self.created = c_char_p(None)
-            self.mode = c_int(-1)
-        else:
-            self.name = c_char_p(fdobj.name)
-            self.path = c_char_p(fdobj.path)
-            self.created = c_char_p(fdobj.created)
-            self.mode = c_int(fdobj.mode)
-
 class sockaddr(Structure):
 
     _fields_ = [('sa_family', c_ushort), 
@@ -138,7 +152,7 @@ class iovec(Structure):
 
     def __init__(self, io_data):
         self.iov_base = cast(io_data, c_void_p) 
-        self.iov_len = size_t(sizeof(fdmsg) * FDBUS_IOVLEN)
+        self.iov_len = size_t(sizeof(c_char) * FDBUS_IOVLEN)
 
 
 class msghdr(Structure):
@@ -148,7 +162,7 @@ class msghdr(Structure):
                 ('msg_control', c_void_p), ('msg_controllen', size_t),
                 ('msg_flags', c_int)]
 
-    def __init__(self, proto, cmd, fdobj=None, client=None):
+    def __init__(self, protocol, cmd, payload=None, client=None):
         # If no 'fd' parameter is passed and no 'cmd' parameter is passed upon 
         # initialization, this is a header for a "receiver" call.  Otherwise 
         # this will initialized for a "sender" call, which will need a slightly 
@@ -163,14 +177,20 @@ class msghdr(Structure):
         # With the cmsghdr its the similiar idea, where the "sender" will 
         # have the struct initialized with its data set and the "receiver"
         # will have an empty array assigned to its data field.
-        if proto == RECV:
+        if protocol == RECV or protocol == CLOSE or protocol == REFERENCE:
             ctrl_msg = CTRL_MSG_RECV()
+            if cmd == RECV_PEER:
+                pass
+            elif cmd == CLS_ALL or cmd == RECV_CMD:
+                pass
+            else:
+                pass
         else:
-            ctrl_msg = pointer(cmsghdr(fdobj.fd))
-        if cmd == PASS_PEER:
-            iov_base = fdobj
-        else:
-            iov_base = pointer(fdmsg(proto, cmd, fdobj, client))
+            if cmd == PASS_PEER or cmd == RECV_PEER:
+                pass
+            else:
+                ctrl_msg = pointer(cmsghdr(payload))
+        iov_base = c_char_p('^')
         self.msg_iov = pointer(iovec(iov_base))
         self.msg_iovlen = size_t(FDBUS_IOVLEN)
         self.msg_control = cast(ctrl_msg, c_void_p)
