@@ -60,7 +60,9 @@ class Server(FDBus, Thread):
                 # raise
             msg_raw = cast(client_req_buffer, c_char_p).value
             msg = msg_raw.split(':')
-            self.recvmsg(client, RECV_CMD, msg)
+            # parse protocol
+            self.cmd_funcs[msg[0]](client, msg)
+            #self.recvmsg(client, RECV_CMD, msg)
 
     def shutdown(self):
         ret = libc.unlink(self.path)
