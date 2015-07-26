@@ -124,9 +124,10 @@ class FDBus(object):
         super(FDBus, self).__init__()
         self.path = path
         self.fdpool = FileDescriptorPool() 
-        self.cmd_funcs = {LOAD:self.ld_cmdmsg, PASS:self.pass_cmdmsg,
-                          RECV:self.recv_cmdmsg, CLOSE:self.cls_cmdmsg, 
-                          REFERENCE:self.ref_cmdmsg}
+        self.proto_funcs = {LOAD:self.ld_protomsg, PASS:self.pass_protomsg,
+                          RECV:self.recv_protomsg, CLOSE:self.cls_protomsg, 
+                          REFERENCE:self.ref_protomsg}
+        self.cmd_funcs = {}
 
     def socket(self):
         sock = libc.socket(AF_UNIX, SOCK_STREAM, PROTO_DEFAULT)
@@ -174,16 +175,17 @@ class FDBus(object):
             error_msg = get_error_msg()
             raise RecvmsgError(error_msg)
         # use cmd to branch methods accordingly --> payload cmd
-        if cmd == RECV_CMD:
+        if cmd == RECV_CMD: # RECV_CMD as tmp cmd
             fd = self.extract_fd(msg)
-            fo = fdopen(fd)    
-            print fo.read()
             fdobj = FileDescriptor(name=payload[2], path=payload[3], fd=fd, 
                                    mode=int(payload[5]), client=sock, 
                                    created=float(payload[6]))
             self.fdpool.add(sock, fdobj)
 
     def sendmsg(self, protocol, cmd, payload=None, client=None):
+        # make distinction between sendmsg from server or client
+        # if client is not none for a client sendmsg on PASS_FD
+        # the receipent is still self.sock but is loaded in fdobj
         receipent = client if client is not None else self.sock
         msg = pointer(msghdr(protocol, cmd, payload, client))
         if libc.sendmsg(receipent, msg, MSG_SERV) == -1:
@@ -194,7 +196,7 @@ class FDBus(object):
         fdobj = FileDescriptor(path=path, mode=mode, client=self)
         self.fdpool.add(self, fdobj)
 
-    def get_cmdmsg(self, sock, msg):
+    def get_protomsg(self, sock, msg):
         protocol = fmsg.protocol
         try:
             self.cmd_funcs[protocol](sock, fmsg.command, msg)
@@ -205,11 +207,11 @@ class FDBus(object):
         fd = CMSG_DATA(msg.contents.msg_control)
         return fd
         
-    def ld_cmdmsg(self, sock, cmd, msg):
+    def ld_protomsg(self, sock, cmd, msg):
         fdobj = self.extract_fdobj(cmd, msg)
         self.fdpool.add(sock, fdobj) 
 
-    def recv_cmdmsg(self, sock, cmd, msg):
+    def recv_protomsg(self, sock, cmd, msg):
         if cmd == RECV_PEER:
             pass
         elif cmd == RECV_FD:
@@ -220,7 +222,7 @@ class FDBus(object):
             #raise invalid cmd
             return
         
-    def pass_cmdmsg(self, sock, cmd, msg):
+    def pass_protomsg(self, sock, cmd, msg):
         if cmd == PASS_PEER:
             self.sendmsg(PASS, PEER_RECV, peers, sock)
         elif cmd == PASS_FD:
@@ -230,7 +232,7 @@ class FDBus(object):
             #raise invalid cmd
             return
 
-    def cls_cmdmsg(self, sock, cmd, msg):
+    def cls_protomsg(self, sock, cmd, msg):
         if cmd == CLS_FD:
             vector = self.unpack_vector(msg)
             self.fdpool.remove(vector.name)
@@ -240,7 +242,7 @@ class FDBus(object):
             #raise invalid cmd
             return
 
-    def ref_cmdmsg(self, sock, cmd, msg):
+    def ref_protomsg(self, sock, cmd, msg):
         if cmd == RET_FD:
             pass
         elif cmd == REFCNT_FD:
