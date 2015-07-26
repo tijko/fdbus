@@ -106,6 +106,23 @@ class ConnectError(Exception):
         return "libc.connect error: %s" % self.msg
 
 
+class RecvError(Exception):
+
+    """
+        Exception class raised in the event of an error returned from a call to
+        libc.recv
+
+        The msg is propagated from the system call giving a more descriptive
+        reason for the fail.
+    """
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return "libc.recv.error: %s" % self.msg
+
+
 class RecvmsgError(Exception):
 
     """

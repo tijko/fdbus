@@ -125,9 +125,8 @@ class FDBus(object):
         self.path = path
         self.fdpool = FileDescriptorPool() 
         self.proto_funcs = {LOAD:self.ld_protomsg, PASS:self.pass_protomsg,
-                          RECV:self.recv_protomsg, CLOSE:self.cls_protomsg, 
-                          REFERENCE:self.ref_protomsg}
-        self.cmd_funcs = {}
+                            RECV:self.recv_protomsg, CLOSE:self.cls_protomsg, 
+                            REFERENCE:self.ref_protomsg}
 
     def socket(self):
         sock = libc.socket(AF_UNIX, SOCK_STREAM, PROTO_DEFAULT)
@@ -140,8 +139,8 @@ class FDBus(object):
         pool = self.fdpool.fdobjs
         for fd in pool:
             pool[fd][1].fclose()
-        for fd in self.fdpool.client_fdobjs:
-            libc.close(fd)
+        #for fd in self.fdpool.client_fdobjs:
+        #    libc.close()
 
     def get_fd(self, name):
         fdobj = self.fdpool.fdobjs.get(name)
@@ -174,7 +173,7 @@ class FDBus(object):
         if libc.recvmsg(sock, msg, MSG_SERV) == -1:
             error_msg = get_error_msg()
             raise RecvmsgError(error_msg)
-        # use cmd to branch methods accordingly --> payload cmd
+        return msg
         if cmd == RECV_CMD: # RECV_CMD as tmp cmd
             fd = self.extract_fd(msg)
             fdobj = FileDescriptor(name=payload[2], path=payload[3], fd=fd, 
@@ -192,9 +191,11 @@ class FDBus(object):
             error_msg = get_error_msg() 
             raise SendmsgError(error_msg) 
 
-    def createfd(self, path, mode):
-        fdobj = FileDescriptor(path=path, mode=mode, client=self)
-        self.fdpool.add(self, fdobj)
+    def createfd(self, path, mode, fd=None, client=None, created=None):
+        client = client if client else self.sock
+        fdobj = FileDescriptor(path=path, mode=mode, fd=fd,
+                               client=client, created=created)
+        self.fdpool.add(client, fdobj)
 
     def get_protomsg(self, sock, msg):
         protocol = fmsg.protocol
@@ -208,8 +209,11 @@ class FDBus(object):
         return fd
         
     def ld_protomsg(self, sock, cmd, msg):
-        fdobj = self.extract_fdobj(cmd, msg)
-        self.fdpool.add(sock, fdobj) 
+        path, created = msg[3], float(msg[6]) 
+        # sock if not msg[?] --
+        msg = self.recvmsg(sock, cmd)
+        fd = self.extract_fd(msg)
+        self.createfd(path, COMMAND_NUMBERS[cmd], fd, sock, created)
 
     def recv_protomsg(self, sock, cmd, msg):
         if cmd == RECV_PEER:
@@ -217,7 +221,7 @@ class FDBus(object):
         elif cmd == RECV_FD:
             pass
         elif cmd == RECV_CMD:
-            pass
+            self.recvmsg(sock, RECV_CMD, msg)
         else:
             #raise invalid cmd
             return

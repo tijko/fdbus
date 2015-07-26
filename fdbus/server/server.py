@@ -57,12 +57,10 @@ class Server(FDBus, Thread):
             ret = libc.recv(client, client_req_buffer, MSG_LEN, MSG_FLAGS)
             if ret == -1:
                 error_msg = get_error_msg()
-                # raise
+                raise RecvError(error_msg)
             msg_raw = cast(client_req_buffer, c_char_p).value
             msg = msg_raw.split(':')
-            # parse protocol
-            self.cmd_funcs[msg[0]](client, msg)
-            #self.recvmsg(client, RECV_CMD, msg)
+            self.proto_funcs[PROTOCOL_NUMBERS[msg[0]]](client, msg[1], msg)
 
     def shutdown(self):
         ret = libc.unlink(self.path)

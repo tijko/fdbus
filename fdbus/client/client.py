@@ -46,7 +46,6 @@ class Client(FDBus):
         # attributes and affiliated data.
         #
         # 'LOAD:LOAD_RDONLY:testfile:/home/tijko/testfile/created:1233492.3929' 
-        libc.send
         self.send_fd(LOAD, name)
 
     def getpeers(self):
