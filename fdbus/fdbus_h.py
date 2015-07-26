@@ -65,7 +65,7 @@ REQ_BUFFER = ARRAY(c_char, REQ_MSG_MAX - 1)
 
 MSG_FLAGS = c_int(0)
 MSG_LEN = c_int(REQ_MSG_MAX)
-
+# XXX for building the protocol
 PROTOCOL_NAMES = {LOAD:'LOAD', RECV:'RECV', PASS:'PASS', 
                   CLOSE:'CLOSE', REFERENCE:'REFERENCE'}
 
