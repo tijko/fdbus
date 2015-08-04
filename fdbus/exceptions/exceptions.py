@@ -89,6 +89,23 @@ class SendmsgError(Exception):
         return "libc.sendmsg error: %s" % self.msg
 
 
+class SendError(Exception):
+
+    """
+        Exception class raised in the event of an error returned from a call to
+        libc.send
+
+        The msg is propagated from the system call giving a more descriptive
+        reason for the fail.
+    """
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return "libc.send error: %s" % self.msg
+
+
 class ConnectError(Exception):
 
     """

@@ -136,12 +136,13 @@ class FDBus(object):
         return sock
 
     def close_pool(self):
-        pool = self.fdpool.fdobjs
-        for fd in pool:
-            pool[fd][1].fclose()
-        #for fd in self.fdpool.client_fdobjs:
-        #    libc.close()
-
+        fdpool = self.fdpool.fdobjs
+        client_fdpool = self.clients.fdpool
+        for fd in fdpool:
+            fdpool[fd][1].fclose()
+        for fd in client_fdpool:
+            libc.close(fd)
+        
     def get_fd(self, name):
         fdobj = self.fdpool.fdobjs.get(name)
         if fdobj is None:
@@ -160,7 +161,7 @@ class FDBus(object):
                          MSG_LEN, MSG_FLAGS)
         if ret == -1:
             error_msg = get_error_msg()
-            # raise
+            raise SendError(error_msg)
         self.sendmsg(protocol, cmd, fdobj.fd, recepient)
 
     def remove_fd(self, name):
