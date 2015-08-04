@@ -166,6 +166,7 @@ class FDBus(object):
         self.sendmsg(protocol, cmd, fdobj.fd, recepient)
 
     def remove_fd(self, name):
+        # XXX build protocol send, no need for sendmsg
         fdobj = self.get_fd(name)
         self.sendmsg(CLOSE, CLS_FD, fdobj[1])
 
@@ -178,9 +179,6 @@ class FDBus(object):
         return msg
 
     def sendmsg(self, protocol, cmd, payload=None, client=None):
-        # make distinction between sendmsg from server or client
-        # if client is not none for a client sendmsg on PASS_FD
-        # the receipent is still self.sock but is loaded in fdobj
         receipent = client if client is not None else self.sock
         msg = pointer(msghdr(protocol, cmd, payload, client))
         if libc.sendmsg(receipent, msg, MSG_SERV) == -1:
@@ -204,23 +202,30 @@ class FDBus(object):
         self.createfd(path, COMMAND_NUMBERS[cmd], fd, sock, created)
 
     def recv_protomsg(self, sock, cmd, msg):
+        # move these to before the call?
+        try:
+            cmd = COMMAND_NUMBERS[cmd]
+        except KeyError:
+            raise InvalidCmdError(cmd)
         if cmd == RECV_PEER:
-            pass
+            self.client_peer_req(sock)
         elif cmd == RECV_FD:
             pass
         elif cmd == RECV_CMD:
             self.recvmsg(sock, RECV_CMD, msg)
-        else:
-            raise InvalidCmdError(cmd)
         
     def pass_protomsg(self, sock, cmd, msg):
+        # move these to before the call?
+        try:
+            cmd = COMMAND_NUMBERS[cmd]
+        except KeyError:
+            raise InvalidCmdError(cmd)
         if cmd == PASS_PEER:
-            self.sendmsg(PASS, PEER_RECV, peers, sock)
+            #self.sendmsg(PASS, RECV_PEER, peers, sock)
+            pass
         elif cmd == PASS_FD:
             fdobj = self.extract_fdobj(cmd, msg)
             self.sendmsg(RECV, cmd, fdobj, fdobj.client)
-        else:
-            raise InvalidCmdError(cmd)
 
     def cls_protomsg(self, sock, cmd, msg):
         if cmd == CLS_FD:

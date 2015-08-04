@@ -39,6 +39,7 @@ class Server(FDBus, Thread):
             raise AcceptError(error_msg)
         self.server_event_poll.register(client, EVENT_MASK)
         self.clients[client] = PyCClientWrapper(client)
+        # some naming aspect of the messaging
         # have the server create an id, not just the fd of the client 
 
     def client_ev(self, client, ev):
@@ -84,6 +85,18 @@ class Server(FDBus, Thread):
 
     def remove_client(self, client):
         self.clients.remove(client)
+
+    def client_peer_req(self, client):
+        peers = self.current_clients
+        peer_dump = ':'.join([PROTOCOL_NAMES[PASS], COMMAND_NAMES[PASS_PEER]]
+                              + map(str, peers))
+        peer_buffer = REQ_BUFFER()
+        peer_buffer.value = peer_dump
+        ret = libc.send(client, cast(peer_buffer, c_void_p), 
+                        MSG_LEN, MSG_FLAGS)
+        if ret == -1:
+            error_msg = get_error_msg()
+            raise SendError(error_msg)
 
     def run(self):
         # poll for incoming messages to shutdown
@@ -140,8 +153,7 @@ class ClientPool(object):
 
 
 class PyCClientWrapper(object):
-    # specify / name -> each client ...?
-    # provide more detailed info on each client.
-    # or more decoupled client to fds 
+    # specify / name -> each client ...? provide more detailed info on each 
+    # client. More decoupled client to fds 
     def __init__(self, client_c_fd):
         self.fd = client_c_fd

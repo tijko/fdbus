@@ -26,7 +26,11 @@ class Client(FDBus, Thread):
             raise ConnectError(error_msg)
         self.connected = True
         self.start()
-   
+
+    def disconnect(self):
+        # run cleanup
+        pass
+           
     def writefd(self):
         pass
 
@@ -50,8 +54,19 @@ class Client(FDBus, Thread):
         self.send_fd(LOAD, name)
 
     def getpeers(self):
-        self.sendmsg(PASS, PEER_DUMP)
-        self.recvmsg(self.sock, RECV, RECV_PEER)
+        # use send instead of lower level sendmsg 
+        # create a build request method in fdobjects.
+        req_buffer = REQ_BUFFER()
+        request = ':'.join([PROTOCOL_NAMES[RECV], COMMAND_NAMES[RECV_PEER]])
+        req_buffer.value = request
+        ret = libc.send(self.sock, cast(req_buffer, c_void_p), 
+                        MSG_LEN, MSG_FLAGS)
+        if ret == -1:
+            error_msg = get_error_msg()
+            raise SendError(error_msg)
+
+    def recvpeers(self):
+        pass
 
     def readfd(self, fd):
         rd_buffer = (c_char * 2048)()
