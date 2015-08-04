@@ -40,12 +40,10 @@ class Server(FDBus, Thread):
         self.server_event_poll.register(client, EVENT_MASK)
         self.clients[client] = PyCClientWrapper(client)
         # have the server create an id, not just the fd of the client 
-        # connection.  then send it back to client
 
     def client_ev(self, client, ev):
         if ev & (POLLHUP | POLLNVAL):
-            # set up array of functions to take
-            # point to which one occured
+            # set up array of functions to take point to which one occured
             libc.close(client)
             self.server_event_poll.unregister(client)
             self.clients.remove(client)
@@ -57,7 +55,10 @@ class Server(FDBus, Thread):
                 raise RecvError(error_msg)
             msg_raw = cast(client_req_buffer, c_char_p).value
             msg = msg_raw.split(':')
-            self.proto_funcs[PROTOCOL_NUMBERS[msg[0]]](client, msg[1], msg)
+            try:
+                self.proto_funcs[PROTOCOL_NUMBERS[msg[0]]](client, msg[1], msg)
+            except KeyError:
+                raise InvalidProtoError(msg)
 
     def shutdown(self):
         ret = libc.unlink(self.path)

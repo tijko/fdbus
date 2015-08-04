@@ -176,12 +176,6 @@ class FDBus(object):
             error_msg = get_error_msg()
             raise RecvmsgError(error_msg)
         return msg
-        if cmd == RECV_CMD: # RECV_CMD as tmp cmd
-            fd = self.extract_fd(msg)
-            fdobj = FileDescriptor(name=payload[2], path=payload[3], fd=fd, 
-                                   mode=int(payload[5]), client=sock, 
-                                   created=float(payload[6]))
-            self.fdpool.add(sock, fdobj)
 
     def sendmsg(self, protocol, cmd, payload=None, client=None):
         # make distinction between sendmsg from server or client
@@ -199,20 +193,12 @@ class FDBus(object):
                                client=client, created=created)
         self.fdpool.add(client, fdobj)
 
-    def get_protomsg(self, sock, msg):
-        protocol = fmsg.protocol
-        try:
-            self.cmd_funcs[protocol](sock, fmsg.command, msg)
-        except KeyError:
-            print 'Invalid protocol %d' % protocol
-
-    def extract_fd(self, msg):
+    def extract_fd(self, msg): 
         fd = CMSG_DATA(msg.contents.msg_control)
         return fd
         
     def ld_protomsg(self, sock, cmd, msg):
         path, created = msg[3], float(msg[6]) 
-        # sock if not msg[?] --
         msg = self.recvmsg(sock, cmd)
         fd = self.extract_fd(msg)
         self.createfd(path, COMMAND_NUMBERS[cmd], fd, sock, created)
@@ -225,8 +211,7 @@ class FDBus(object):
         elif cmd == RECV_CMD:
             self.recvmsg(sock, RECV_CMD, msg)
         else:
-            #raise invalid cmd
-            return
+            raise InvalidCmdError(cmd)
         
     def pass_protomsg(self, sock, cmd, msg):
         if cmd == PASS_PEER:
@@ -235,8 +220,7 @@ class FDBus(object):
             fdobj = self.extract_fdobj(cmd, msg)
             self.sendmsg(RECV, cmd, fdobj, fdobj.client)
         else:
-            #raise invalid cmd
-            return
+            raise InvalidCmdError(cmd)
 
     def cls_protomsg(self, sock, cmd, msg):
         if cmd == CLS_FD:
@@ -245,8 +229,7 @@ class FDBus(object):
         elif cmd == CLS_ALL:
             pass
         else:
-            #raise invalid cmd
-            return
+            raise InvalidCmdError(cmd)
 
     def ref_protomsg(self, sock, cmd, msg):
         if cmd == RET_FD:
@@ -254,5 +237,4 @@ class FDBus(object):
         elif cmd == REFCNT_FD:
             pass
         else:
-            #raise invalid cmd
-            return
+            raise InvalidCmdError(cmd)

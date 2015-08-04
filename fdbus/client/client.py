@@ -71,7 +71,10 @@ class Client(FDBus, Thread):
                 raise RecvError(error_msg)
             msg_raw = cast(client_msg_buffer, c_char_p).value
             msg = msg_raw.split(':')
-            self.proto_funcs[PROTOCOL_NUMBERS[msg[0]]](self.sock, msg[1], msg)
+            try:
+                self.proto_funcs[PROTOCOL_NUMBERS[msg[0]]](self.sock, msg[1], msg)
+            except KeyError:
+                raise InvalidProtoError(msg)
 
     # will locking be needed on handling the incoming messages?
     def run(self):

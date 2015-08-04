@@ -292,6 +292,40 @@ class MsghdrError(Exception):
         return "Msghdr error: %s" % self.msg
 
 
+class InvalidCmdError(Exception):
+
+    """
+        Exception class raised in the event of an invalid cmd passed through
+        a protocol message.
+
+        This error is from supplying a protocol function call with an invalid
+        command argument to specify an action the caller is to take.
+    """
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return "InvalidCmdError error: %s" % self.msg
+
+
+class InvalidProtoError(Exception):
+
+    """
+        Exception class raised in the event of an invalid protocol passed 
+        through a protocol message.
+
+        This error is from supplying a protocol function call with an invalid
+        protocol argument to specify an action the caller is to take.
+    """
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return "InvalidProtoError error: %s" % self.msg
+
+
 class UnlinkError(Exception):
 
     """
