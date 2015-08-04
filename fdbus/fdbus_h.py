@@ -5,8 +5,12 @@ from ctypes import c_int, c_uint, c_longlong, c_ushort, c_char, \
                    c_void_p, c_char_p, POINTER, pointer, cast, \
                    sizeof, Structure, CDLL, get_errno, ARRAY
 
+from threading import Thread
 from exceptions.exceptions import *
 from collections import defaultdict
+
+from select import poll, POLLIN, POLLHUP, POLLNVAL
+
 
 libc = CDLL('libc.so.6', use_errno=True)
 
@@ -62,6 +66,8 @@ REQ_MSG_MAX = sum([PATH_MAX, FNAME_MAX, CREATED_MAX,
                    PROTO_MAX, MODE_MAX, FD_MAX])
  
 REQ_BUFFER = ARRAY(c_char, REQ_MSG_MAX - 1)
+
+EVENT_MASK = POLLIN | POLLHUP | POLLNVAL
 
 MSG_FLAGS = c_int(0)
 MSG_LEN = c_int(REQ_MSG_MAX)

@@ -8,7 +8,7 @@ from ..exceptions.exceptions import *
 from ..fdobjects.fdobjects import FileDescriptor, FileDescriptorPool, FDBus
 
 
-class Client(FDBus):
+class Client(FDBus, Thread):
 
     def __init__(self, path):
         super(Client, self).__init__(path)
@@ -25,7 +25,8 @@ class Client(FDBus):
             error_msg = get_error_msg()
             raise ConnectError(error_msg)
         self.connected = True
-       
+        self.start()
+   
     def writefd(self):
         pass
 
@@ -57,3 +58,27 @@ class Client(FDBus):
         rd_buffer_len = 2048 - 1
         libc.read(c_int(fd), rd_buffer, rd_buffer_len)
         return rd_buffer
+
+    def client_msg(self, ev):
+        if ev & (POLLHUP | POLLNVAL):
+            libc.close(self.sock)
+            self.connected = False
+        else:
+            client_msg_buffer = cast(REQ_BUFFER(), c_void_p)
+            ret = libc.recv(self.sock, client_msg_buffer, MSG_LEN, MSG_FLAGS)
+            if ret == -1:
+                error_msg = get_error_msg()
+                raise RecvError(error_msg)
+            msg_raw = cast(client_msg_buffer, c_char_p).value
+            msg = msg_raw.split(':')
+            self.proto_funcs[PROTOCOL_NUMBERS[msg[0]]](self.sock, msg[1], msg)
+
+    # will locking be needed on handling the incoming messages?
+    def run(self):
+        self.client_msg_queue = poll()
+        self.client_msg_queue.register(self.sock, EVENT_MASK)
+        while self.connected:
+            events = self.client_msg_queue.poll(1)
+            if events:
+                self.client_msg(events[0][1])
+        self.client_msg_queue.unregister(self.sock)

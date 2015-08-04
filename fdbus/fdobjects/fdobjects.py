@@ -157,7 +157,8 @@ class FDBus(object):
                             name, fdobj.path, str(fdobj.fd), 
                             str(fdobj.mode), str(fdobj.created)])
         req_buffer.value = request
-        ret = libc.send(self.sock, cast(req_buffer, c_void_p), 
+        recepient = recepient if recepient else self.sock
+        ret = libc.send(recepient, cast(req_buffer, c_void_p), 
                          MSG_LEN, MSG_FLAGS)
         if ret == -1:
             error_msg = get_error_msg()

@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from time import ctime
-from threading import Thread
 from signal import signal, SIGINT
-from select import poll, POLLIN, POLLHUP, POLLNVAL
 
 from ..fdbus_h import *
 from ..exceptions.exceptions import *
@@ -19,7 +17,6 @@ class Server(FDBus, Thread):
         self.server_event_poll = poll()
         self.running = True
         self.sock = self.socket()
-        self.event_mask = POLLIN | POLLHUP | POLLNVAL
         signal(SIGINT, self.server_interrupt)
 
     @property
@@ -40,7 +37,7 @@ class Server(FDBus, Thread):
         if client == -1:
             error_msg = get_error_msg()
             raise AcceptError(error_msg)
-        self.server_event_poll.register(client, self.event_mask)
+        self.server_event_poll.register(client, EVENT_MASK)
         self.clients[client] = PyCClientWrapper(client)
         # have the server create an id, not just the fd of the client 
         # connection.  then send it back to client
@@ -95,7 +92,7 @@ class Server(FDBus, Thread):
         if self.listen == -1:
             error_msg = get_error_msg()
             raise ListenError(errno)
-        self.server_event_poll.register(self.sock, self.event_mask)
+        self.server_event_poll.register(self.sock, EVENT_MASK)
         while self.running:
             events = self.server_event_poll.poll(1)
             if events:
