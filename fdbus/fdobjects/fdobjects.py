@@ -152,13 +152,11 @@ class FDBus(object):
     def send_fd(self, protocol, name, recepient=None):
         fdobj = self.get_fd(name)[1]
         cmd = fdobj.mode if recepient is None else PASS_FD
-        req_buffer = REQ_BUFFER()
-        request = ':'.join([PROTOCOL_NAMES[protocol], COMMAND_NAMES[cmd], 
-                            name, fdobj.path, str(fdobj.fd), 
-                            str(fdobj.mode), str(fdobj.created)])
-        req_buffer.value = request
+        payload = [name, fdobj.path] + \
+                  map(str, [fdobj.fd, fdobj.mode, fdobj.created])
+        request = self.build_msg(protocol, cmd, *payload) 
         recepient = recepient if recepient else self.sock
-        ret = libc.send(recepient, cast(req_buffer, c_void_p), 
+        ret = libc.send(recepient, cast(request, c_void_p), 
                          MSG_LEN, MSG_FLAGS)
         if ret == -1:
             error_msg = get_error_msg()
@@ -184,6 +182,12 @@ class FDBus(object):
         if libc.sendmsg(receipent, msg, MSG_SERV) == -1:
             error_msg = get_error_msg() 
             raise SendmsgError(error_msg) 
+
+    def build_msg(self, protocol, cmd, *payload):
+        req_buffer = REQ_BUFFER()
+        request = (PROTOCOL_NAMES[protocol], COMMAND_NAMES[cmd]) + payload
+        req_buffer.value = ':'.join(request)
+        return req_buffer
 
     def createfd(self, path, mode, fd=None, client=None, created=None):
         client = client if client else self.sock

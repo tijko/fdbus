@@ -87,12 +87,9 @@ class Server(FDBus, Thread):
         self.clients.remove(client)
 
     def client_peer_req(self, client):
-        peers = self.current_clients
-        peer_dump = ':'.join([PROTOCOL_NAMES[PASS], COMMAND_NAMES[PASS_PEER]]
-                              + map(str, peers))
-        peer_buffer = REQ_BUFFER()
-        peer_buffer.value = peer_dump
-        ret = libc.send(client, cast(peer_buffer, c_void_p), 
+        peers = map(str, self.current_clients)
+        peer_dump = self.build_msg(PASS, PASS_PEER, *peers)
+        ret = libc.send(client, cast(peer_dump, c_void_p), 
                         MSG_LEN, MSG_FLAGS)
         if ret == -1:
             error_msg = get_error_msg()

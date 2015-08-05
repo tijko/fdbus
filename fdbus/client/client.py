@@ -54,12 +54,8 @@ class Client(FDBus, Thread):
         self.send_fd(LOAD, name)
 
     def getpeers(self):
-        # use send instead of lower level sendmsg 
-        # create a build request method in fdobjects.
-        req_buffer = REQ_BUFFER()
-        request = ':'.join([PROTOCOL_NAMES[RECV], COMMAND_NAMES[RECV_PEER]])
-        req_buffer.value = request
-        ret = libc.send(self.sock, cast(req_buffer, c_void_p), 
+        request = self.build_msg(RECV, RECV_PEER)
+        ret = libc.send(self.sock, cast(request, c_void_p), 
                         MSG_LEN, MSG_FLAGS)
         if ret == -1:
             error_msg = get_error_msg()
