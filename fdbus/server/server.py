@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from time import ctime
+from functools import partial
 from signal import signal, SIGINT
 
 from ..fdbus_h import *
@@ -92,7 +93,8 @@ class Server(FDBus, Thread):
         self.clients.remove(client)
 
     def client_peer_req(self, client):
-        peers = map(str, self.current_clients)
+        peers = filter(partial(lambda c1, c2: c1 != c2, str(client)),
+                map(str, self.current_clients))
         peer_dump = self.build_msg(PASS, PASS_PEER, *peers)
         ret = libc.send(client, cast(peer_dump, c_void_p), 
                         MSG_LEN, MSG_FLAGS)
