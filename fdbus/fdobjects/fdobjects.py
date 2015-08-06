@@ -151,9 +151,9 @@ class FDBus(object):
 
     def send_fd(self, protocol, name, recepient=None):
         fdobj = self.get_fd(name)[1]
-        cmd = fdobj.mode if recepient is None else PASS_FD
+        cmd = fdobj.mode
         payload = [name, fdobj.path] + \
-                  map(str, [fdobj.fd, fdobj.mode, fdobj.created])
+                   map(str, [fdobj.fd, fdobj.mode, fdobj.created])
         request = self.build_msg(protocol, cmd, *payload) 
         recepient = recepient if recepient else self.sock
         ret = libc.send(recepient, cast(request, c_void_p), 
@@ -225,8 +225,7 @@ class FDBus(object):
         except KeyError:
             raise InvalidCmdError(cmd)
         if cmd == PASS_PEER:
-            #self.sendmsg(PASS, RECV_PEER, peers, sock)
-            pass
+            self.recvpeers(msg)
         elif cmd == PASS_FD:
             fdobj = self.extract_fdobj(cmd, msg)
             self.sendmsg(RECV, cmd, fdobj, fdobj.client)

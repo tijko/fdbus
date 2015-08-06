@@ -61,8 +61,8 @@ class Client(FDBus, Thread):
             error_msg = get_error_msg()
             raise SendError(error_msg)
 
-    def recvpeers(self):
-        pass
+    def recvpeers(self, msg):
+        self.peers = msg[2:]
 
     def readfd(self, fd):
         rd_buffer = (c_char * 2048)()

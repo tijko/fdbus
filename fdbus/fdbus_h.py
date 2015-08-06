@@ -61,7 +61,7 @@ CREATED_MAX = 0x10
 PROTO_MAX   = 0x8
 MODE_MAX    = 0x8 
 FD_MAX      = 0x8
-
+# MAX_CLIENTS ...
 REQ_MSG_MAX = sum([PATH_MAX, FNAME_MAX, CREATED_MAX, 
                    PROTO_MAX, MODE_MAX, FD_MAX])
  
