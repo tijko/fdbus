@@ -203,14 +203,9 @@ class FDBus(object):
         path, created = msg[3], float(msg[6]) 
         msg = self.recvmsg(sock, cmd)
         fd = self.extract_fd(msg)
-        self.createfd(path, COMMAND_NUMBERS[cmd], fd, sock, created)
+        self.createfd(path, cmd, fd, sock, created)
 
     def recv_protomsg(self, sock, cmd, msg):
-        # move these to before the call?
-        try:
-            cmd = COMMAND_NUMBERS[cmd]
-        except KeyError:
-            raise InvalidCmdError(cmd)
         if cmd == RECV_PEER:
             self.client_peer_req(sock)
         elif cmd == RECV_FD:
@@ -219,11 +214,6 @@ class FDBus(object):
             self.recvmsg(sock, RECV_CMD, msg)
         
     def pass_protomsg(self, sock, cmd, msg):
-        # move these to before the call?
-        try:
-            cmd = COMMAND_NUMBERS[cmd]
-        except KeyError:
-            raise InvalidCmdError(cmd)
         if cmd == PASS_PEER:
             self.recvpeers(msg)
         elif cmd == PASS_FD:

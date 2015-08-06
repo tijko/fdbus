@@ -57,9 +57,14 @@ class Server(FDBus, Thread):
             msg_raw = cast(client_req_buffer, c_char_p).value
             msg = msg_raw.split(':')
             try:
-                self.proto_funcs[PROTOCOL_NUMBERS[msg[0]]](client, msg[1], msg)
+                protocol = PROTOCOL_NUMBERS[msg[0]]
             except KeyError:
-                raise InvalidProtoError(msg)
+                raise InvalidProtoError(msg[0])
+            try:
+                cmd = COMMAND_NUMBERS[msg[1]]
+            except KeyError:
+                raise InvalidCmdError(msg[1])
+            self.proto_funcs[protocol](client, cmd, msg)
 
     def shutdown(self):
         ret = libc.unlink(self.path)
