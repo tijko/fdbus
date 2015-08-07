@@ -86,11 +86,7 @@ class Server(FDBus, Thread):
         self.shutdown()
 
     def passfd(self, client, fd_name):
-        try:
-            recepient = [c for c in self.clients.fdpool.keys() 
-                         if c == int(client)][0]
-        except IndexError:
-            raise UnknownDescriptorError(client)
+        recepient = self.clients[int(client)].fd
         self.send_fd(fd_name, recepient)
 
     @property
