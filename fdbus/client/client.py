@@ -41,7 +41,12 @@ class Client(FDBus, Thread):
         self.remove_fd(name)        
 
     def passfd(self, name, peer):
-        self.send_fd(PASS, name, peer)
+        request = self.build_msg(PASS, PASS_FD, peer, name)
+        ret = libc.send(self.sock, cast(request, c_void_p),
+                        MSG_LEN, MSG_FLAGS)
+        if ret == -1:
+            error_msg = get_error_msg()
+            raise SendError(error_msg)
 
     def loadfd(self, name):
         # depending on function, protocol is not needed for formatting
@@ -51,7 +56,7 @@ class Client(FDBus, Thread):
         # attributes and affiliated data.
         #
         # 'LOAD:LOAD_RDONLY:testfile:/home/tijko/testfile/created:1233492.3929' 
-        self.send_fd(LOAD, name)
+        self.send_fd(name)
 
     def getpeers(self):
         request = self.build_msg(RECV, RECV_PEER)

@@ -149,19 +149,19 @@ class FDBus(object):
             raise UnknownDescriptorError(name)
         return fdobj
 
-    def send_fd(self, protocol, name, recepient=None):
+    def send_fd(self, name, recepient=None):
         fdobj = self.get_fd(name)[1]
         cmd = fdobj.mode
         payload = [name, fdobj.path] + \
                    map(str, [fdobj.fd, fdobj.mode, fdobj.created])
-        request = self.build_msg(protocol, cmd, *payload) 
+        request = self.build_msg(LOAD, cmd, *payload) 
         recepient = recepient if recepient else self.sock
         ret = libc.send(recepient, cast(request, c_void_p), 
                          MSG_LEN, MSG_FLAGS)
         if ret == -1:
             error_msg = get_error_msg()
             raise SendError(error_msg)
-        self.sendmsg(protocol, cmd, fdobj.fd, recepient)
+        self.sendmsg(LOAD, cmd, fdobj.fd, recepient)
 
     def remove_fd(self, name):
         # XXX build protocol send, no need for sendmsg
@@ -217,8 +217,7 @@ class FDBus(object):
         if cmd == PASS_PEER:
             self.recvpeers(msg)
         elif cmd == PASS_FD:
-            fdobj = self.extract_fdobj(cmd, msg)
-            self.sendmsg(RECV, cmd, fdobj, fdobj.client)
+            self.passfd(*msg[2:])
 
     def cls_protomsg(self, sock, cmd, msg):
         if cmd == CLS_FD:
