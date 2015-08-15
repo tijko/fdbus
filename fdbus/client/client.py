@@ -31,6 +31,7 @@ class Client(FDBus, Thread):
         fdobjs = self.fdpool.fdobjs.values()
         for fdobj in fdobjs:
             fdobj[1].fclose()
+        self.connected = False
            
     def writefd(self):
         pass
