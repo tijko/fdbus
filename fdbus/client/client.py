@@ -28,8 +28,9 @@ class Client(FDBus, Thread):
         self.start()
 
     def disconnect(self):
-        # run cleanup
-        pass
+        fdobjs = self.fdpool.fdobjs.values()
+        for fdobj in fdobjs:
+            fdobj[1].fclose()
            
     def writefd(self):
         pass
