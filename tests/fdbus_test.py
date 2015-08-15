@@ -17,11 +17,11 @@ class FDBusServerTest(unittest.TestCase):
         self.assertTrue(test_server.running) 
 
     def test_server_pool(self):
-        self.assertTrue(len(test_server.clients) == 2)
+        self.assertTrue(len(test_server.clients) == number_of_clients)
 
     def test_server_recvfd(self):
         fdpool = test_server.fdpool.fdobjs
-        self.assertTrue(len(fdpool) == 2)
+        self.assertTrue(len(fdpool) == number_of_clients)
 
 class FDBusClientTest(unittest.TestCase):
 
@@ -37,14 +37,14 @@ class FDBusClientTest(unittest.TestCase):
     def test_client_fdname(self):
         for client_number, client in enumerate(clients):
             pool = client.fdpool
-            test_fd_name = 'test_fdbus_file' + str(client_number)
+            test_fd_name = default_path + str(client_number)
             test_fd = pool.fdobjs[test_fd_name][1]
             self.assertTrue(test_fd.name == test_fd_name)
 
     def test_client_fdpath(self):
         for client_number, client in enumerate(clients):
             pool = client.fdpool
-            test_fd_name = 'test_fdbus_file' + str(client_number)
+            test_fd_name = default_path + str(client_number)
             test_fd_path = os.path.join(cwd, test_fd_name)
             test_fd = pool.fdobjs[test_fd_name][1]
             self.assertTrue(test_fd.path == test_fd_path)
@@ -52,7 +52,7 @@ class FDBusClientTest(unittest.TestCase):
     def test_client_fdmode(self):
         for client_number, client in enumerate(clients):
             pool = client.fdpool
-            test_fd_name = 'test_fdbus_file' + str(client_number)
+            test_fd_name = default_path + str(client_number)
             test_fd = pool.fdobjs[test_fd_name][1]
             self.assertTrue(test_fd.mode == O_RDONLY)
 
@@ -63,9 +63,8 @@ class FDBusClientClosingTest(unittest.TestCase):
     pass
 
 
-def create_clients(server_path, cwd, number_of_clients):
+def create_clients():
     clients = []
-    default_path = 'test_fdbus_file'
     for client in xrange(number_of_clients):
         client_path = default_path + str(client)
         test_path = os.path.join(cwd, client_path)
@@ -83,13 +82,15 @@ if __name__ == '__main__':
     server_path = '/tmp/fdbus_test_server'
     cwd = os.getcwd()
     number_of_clients = 2
+    default_path = 'test_fdbus_file'
     if os.path.exists(server_path):
         os.unlink(server_path)
     test_server = Server(server_path)
     test_server.start()
-    clients = create_clients(server_path, cwd, 2)
+    clients = create_clients()
     sleep(2)
     unittest.main(verbosity=3, exit=False)
-    for client in clients:
+    for client_number, client in enumerate(clients):
+        os.remove(default_path + str(client_number))
         client.connected = False
     test_server.running = False
