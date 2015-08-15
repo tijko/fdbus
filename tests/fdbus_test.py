@@ -92,5 +92,5 @@ if __name__ == '__main__':
     unittest.main(verbosity=3, exit=False)
     for client_number, client in enumerate(clients):
         os.remove(default_path + str(client_number))
-        client.connected = False
+        client.disconnect()
     test_server.running = False
