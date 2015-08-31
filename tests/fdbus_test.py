@@ -23,6 +23,7 @@ class FDBusServerTest(unittest.TestCase):
         fdpool = test_server.fdpool.fdobjs
         self.assertTrue(len(fdpool) == number_of_clients)
 
+
 class FDBusClientTest(unittest.TestCase):
 
     def test_client_connection(self):
@@ -56,9 +57,16 @@ class FDBusClientTest(unittest.TestCase):
             test_fd = pool.fdobjs[test_fd_name][1]
             self.assertTrue(test_fd.mode == O_RDONLY)
 
-class FDBusClientPeersTest(unittest.TestCase):
-    pass
 
+class FDBusClientPeersTest(unittest.TestCase):
+
+    def test_client_peers(self):
+        for client in clients:
+            client.getpeers()
+            sleep(1)
+            self.assertTrue(len(client.peers) == (number_of_clients - 1))
+
+        
 class FDBusClientClosingTest(unittest.TestCase):
     pass
 
@@ -77,7 +85,6 @@ def create_clients():
         clients.append(c)
     return clients
          
-
 if __name__ == '__main__':
     server_path = '/tmp/fdbus_test_server'
     cwd = os.getcwd()
