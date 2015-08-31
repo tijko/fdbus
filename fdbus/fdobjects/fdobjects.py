@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
-from os import fdopen
-from os import fstat as stat
+from os import fdopen, fstat as stat
 from time import ctime, time
 
 from ..fdbus_h import *
@@ -73,6 +72,7 @@ class FileDescriptor(object):
             raise OpenError(error_msg)
         return fd
 
+
 class _FileDescriptor(fdobj):
 
     def __init__(self, name, path, fd, mode, client, created):
@@ -106,8 +106,10 @@ class _FileDescriptor(fdobj):
         offset = libc.lseek(self.fd, c_pos, SEEK_SET)
 
     def fclose(self):
-        # handle errors
         ret = libc.close(self.fd)
+        if ret == -1:
+            error_msg = get_error_msg()
+            raise CloseError(error_msg)
 
     def __enter__(self):
         # handle errors
