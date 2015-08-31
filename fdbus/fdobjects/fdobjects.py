@@ -31,6 +31,9 @@ class FileDescriptorPool(object):
         except KeyError:
             raise UnknownDescriptorError(name)
 
+    def __len__(self):
+        return len(self.fdobjs)
+
     def retrieve(self, fdobj):
         pass
 
