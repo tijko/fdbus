@@ -20,8 +20,7 @@ class FDBusServerTest(unittest.TestCase):
         self.assertTrue(len(test_server.clients) == number_of_clients)
 
     def test_server_recvfd(self):
-        fdpool = test_server.fdpool.fdobjs
-        self.assertTrue(len(fdpool) == number_of_clients)
+        self.assertTrue(len(test_server.fdpool) == number_of_clients)
 
 
 class FDBusClientTest(unittest.TestCase):
@@ -32,8 +31,7 @@ class FDBusClientTest(unittest.TestCase):
 
     def test_client_createfd(self):
         for client in clients:
-            pool = client.fdpool
-            self.assertTrue(len(pool.fdobjs) == 1)
+            self.assertTrue(len(client.fdpool) == 1)
 
     def test_client_fdname(self):
         for client_number, client in enumerate(clients):
@@ -57,13 +55,19 @@ class FDBusClientTest(unittest.TestCase):
             test_fd = pool.fdobjs[test_fd_name][1]
             self.assertTrue(test_fd.mode == O_RDONLY)
 
+    def test_client_passfd(self):
+        for client_number, client in enumerate(clients):
+            for peer in client.peers:
+                client.passfd(default_path + str(client_number), peer)
+                sleep(0.5)
+        for client in clients:
+            self.assertTrue(len(client.fdpool) == number_of_clients) 
+
 
 class FDBusClientPeersTest(unittest.TestCase):
 
     def test_client_peers(self):
         for client in clients:
-            client.getpeers()
-            sleep(1)
             self.assertTrue(len(client.peers) == (number_of_clients - 1))
 
         
@@ -83,6 +87,8 @@ def create_clients():
         c.createfd(test_path, O_RDONLY)
         c.loadfd(client_path)
         clients.append(c)
+    sleep(0.5)
+    map(Client.getpeers, clients)
     return clients
          
 if __name__ == '__main__':
