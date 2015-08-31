@@ -54,7 +54,6 @@ REFERENCE = 0x200
 RET_FD    = 0x100
 REFCNT_FD = 0x200
 
-# XXX good spot to hold??
 PATH_MAX    = 0x400
 FNAME_MAX   = 0x100
 CREATED_MAX = 0x10
@@ -71,7 +70,7 @@ EVENT_MASK = POLLIN | POLLHUP | POLLNVAL
 
 MSG_FLAGS = c_int(0)
 MSG_LEN = c_int(REQ_MSG_MAX)
-# XXX for building the protocol
+# protocol number-to-name hash for building the protocol
 PROTOCOL_NAMES = {LOAD:'LOAD', RECV:'RECV', PASS:'PASS', 
                   CLOSE:'CLOSE', REFERENCE:'REFERENCE'}
 
