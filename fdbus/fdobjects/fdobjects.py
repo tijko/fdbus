@@ -214,7 +214,7 @@ class FDBus(object):
         if cmd == RECV_PEER:
             self.client_peer_req(sock)
         elif cmd == RECV_FD:
-            pass
+            self.send_fd(msg[2], sock)
         elif cmd == RECV_CMD:
             self.recvmsg(sock, RECV_CMD, msg)
         
