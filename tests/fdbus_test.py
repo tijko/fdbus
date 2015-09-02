@@ -20,7 +20,7 @@ class FDBusServerTest(unittest.TestCase):
         self.assertTrue(len(test_server.clients) == number_of_clients)
 
     def test_server_recvfd(self):
-        self.assertTrue(len(test_server.fdpool) == number_of_clients)
+        self.assertTrue(len(test_server.fdpool) == number_of_clients + 1)
 
 
 class FDBusClientTest(unittest.TestCase):
@@ -61,8 +61,15 @@ class FDBusClientTest(unittest.TestCase):
                 client.passfd(default_path + str(client_number), peer)
                 sleep(0.5)
         for client in clients:
-            self.assertTrue(len(client.fdpool) == number_of_clients) 
+            self.assertTrue(len(client.fdpool) == number_of_clients + 1) 
 
+    def test_client_getfd(self):
+        for client in clients:
+            client.getfd(server_test_file)
+            sleep(0.5)
+            pool = client.fdpool
+            self.assertTrue(pool.fdobjs.get(server_test_file) is not None)
+            
 
 class FDBusClientPeersTest(unittest.TestCase):
 
@@ -91,19 +98,28 @@ def create_clients():
     map(Client.getpeers, clients)
     return clients
          
+def create_server_file():
+    server_file = os.path.join(cwd, server_test_file)
+    with open(server_file, 'w+') as test_file:
+        test_file.write(server_file)
+
 if __name__ == '__main__':
     server_path = '/tmp/fdbus_test_server'
     cwd = os.getcwd()
     number_of_clients = 2
     default_path = 'test_fdbus_file'
+    server_test_file = 'test_server_file'
+    create_server_file()
     if os.path.exists(server_path):
         os.unlink(server_path)
     test_server = Server(server_path)
     test_server.start()
+    test_server.createfd(server_test_file, O_RDONLY)
     clients = create_clients()
     sleep(2)
     unittest.main(verbosity=3, exit=False)
     for client_number, client in enumerate(clients):
         os.remove(default_path + str(client_number))
         client.disconnect()
+    os.remove(server_test_file)
     test_server.running = False
