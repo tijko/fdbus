@@ -60,6 +60,14 @@ class Client(FDBus, Thread):
         # 'LOAD:LOAD_RDONLY:testfile:/home/tijko/testfile/created:1233492.3929' 
         self.send_fd(name)
 
+    def getfd(self, name):
+        request = self.build_msg(RECV, RECV_FD, name)
+        ret = libc.send(self.sock, cast(request, c_void_p),
+                        MSG_LEN, MSG_FLAGS)
+        if ret == -1:
+            error_msg = get_error_msg()
+            raise SendError(error_msg)
+
     def getpeers(self):
         request = self.build_msg(RECV, RECV_PEER)
         ret = libc.send(self.sock, cast(request, c_void_p), 
