@@ -84,13 +84,13 @@ class FDBusClientClosingTest(unittest.TestCase):
 
 def create_clients():
     clients = []
-    for client in xrange(number_of_clients):
+    for client in range(number_of_clients):
         client_path = default_path + str(client)
         test_path = os.path.join(cwd, client_path)
+        with open(test_path, 'w+') as test_file:
+            test_file.write(client_path)
         c = Client(server_path)
         c.connect()
-        with open(client_path, 'w+') as test_file:
-            test_file.write(client_path)
         c.createfd(test_path, O_RDONLY)
         c.loadfd(client_path)
         clients.append(c)
@@ -108,12 +108,13 @@ if __name__ == '__main__':
     cwd = os.getcwd()
     number_of_clients = 2
     default_path = 'test_fdbus_file'
-    server_test_file = 'test_server_file'
+    server_test_file = os.path.join(cwd, 'test_server_file')
     create_server_file()
     if os.path.exists(server_path):
         os.unlink(server_path)
     test_server = Server(server_path)
     test_server.start()
+    sleep(1)
     test_server.createfd(server_test_file, O_RDONLY)
     clients = create_clients()
     sleep(2)

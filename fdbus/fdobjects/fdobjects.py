@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
-from os import fdopen, fstat as stat
+from os import getcwd, fdopen, fstat as stat
 from time import ctime, time
 
 from ..fdbus_h import *
@@ -65,7 +65,9 @@ class FileDescriptor(object):
             fd = FileDescriptor.fopen(path, mode)
         client = kwargs.get('client')
         created = time()
-        return _FileDescriptor(name, path, fd, mode, client, created)
+        new_fdobj = _FileDescriptor()
+        new_fdobj.load(name, path, fd, mode, client, created)
+        return new_fdobj 
 
     @staticmethod
     def fopen(path, mode):
@@ -76,19 +78,26 @@ class FileDescriptor(object):
         return fd
 
 
-class _FileDescriptor(fdobj):
+class _FileDescriptor(object):
 
-    def __init__(self, name, path, fd, mode, client, created):
-        super(_FileDescriptor, self).__init__(name, path, fd, mode, 
-                                                   client, created)
+    def __init__(self):
         self.refcnt = 1
+
+    def load(self, *args):
+        self.new_fdobj = fdobj(*args)
+        self.name = self.new_fdobj.name
+        self.path = self.new_fdobj.path
+        self.fd = self.new_fdobj.fd
+        self.mode = self.new_fdobj.path
+        self.client = self.new_fdobj.client
+        self.created = self.new_fdobj.created
 
     def fsize(self):
         try:
             file_size = stat(self.fd).st_size
         except NameError: # handle different errors
             # raise
-            print "File is not open"
+            print("File is not open")
         return file_size
 
     def fpos(self): # handle errors below
@@ -158,7 +167,7 @@ class FDBus(object):
         fdobj = self.get_fd(name)[1]
         cmd = fdobj.mode
         payload = [name, fdobj.path] + \
-                   map(str, [fdobj.fd, fdobj.mode, fdobj.created])
+                   list(map(str, [fdobj.fd, fdobj.mode, fdobj.created]))
         request = self.build_msg(LOAD, cmd, *payload) 
         recepient = recepient if recepient else self.sock
         ret = libc.send(recepient, cast(request, c_void_p), 

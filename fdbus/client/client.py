@@ -19,7 +19,7 @@ class Client(FDBus, Thread):
     def connect(self):
         self.client_address = pointer(sockaddr_un(AF_UNIX, self.path))
         self.client_address.contents.sun_family = AF_UNIX
-        self.client_address.contents.sun_path = self.path
+        self.client_address.contents.sun_path = bytes(self.path, 'utf-8')
         if (libc.connect(self.sock, cast(self.client_address, 
                          POINTER(sockaddr)), sizeof(sockaddr_un)) == -1):
             error_msg = get_error_msg()
